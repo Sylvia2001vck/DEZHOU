@@ -5,7 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nebula Poker - Advanced Pro</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #020105; font-family: 'Segoe UI', sans-serif; color: #ffebcc; }
+        :root {
+            --bg: #020105;
+            --text: #ffebcc;
+            --panel-bg: rgba(25, 12, 5, 0.7);
+            --panel-border: rgba(212, 175, 55, 0.3);
+            --btn-bg: rgba(45, 25, 15, 0.6);
+            --btn-border: rgba(212, 175, 55, 0.4);
+            --btn-text: #d4af37;
+            --accent: #d4af37;
+            --rules-bg: rgba(10, 5, 2, 0.85);
+        }
+        [data-theme="light"] {
+            --bg: #f6f3ea;
+            --text: #1b1b1b;
+            --panel-bg: rgba(255, 255, 255, 0.78);
+            --panel-border: rgba(20, 20, 20, 0.12);
+            --btn-bg: rgba(255, 255, 255, 0.85);
+            --btn-border: rgba(20, 20, 20, 0.18);
+            --btn-text: #3a2a00;
+            --accent: #a67c00;
+            --rules-bg: rgba(255, 255, 255, 0.92);
+        }
+
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
         /* Lobby UI */
@@ -32,14 +55,14 @@
         .summary-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
         #ui-overlay { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; width: 100%; }
-        .panel { background: rgba(25, 12, 5, 0.7); padding: 15px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.3); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+        .panel { background: var(--panel-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--panel-border); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.35); }
         
         /* Rules Modal */
-        #rules-btn { position: relative; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: #ffd700; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
+        #rules-btn { position: relative; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
         #rules-btn:hover { background: rgba(212, 175, 55, 0.4); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
         /* Rules panel: appears directly under the Rules button (inside the ui panel) */
-        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: rgba(10, 5, 2, 0.85); border: 1px solid rgba(255, 215, 0, 0.55); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: #fff; box-shadow: 0 0 35px rgba(212, 175, 55, 0.18); }
-        #rules-modal h2 { color: #ffd700; margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px; }
+        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.35); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: var(--text); box-shadow: 0 0 35px rgba(0,0,0,0.18); }
+        #rules-modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
         #rules-modal ul { list-style: none; padding: 0; }
         #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
         
@@ -49,29 +72,41 @@
         .card-icons .card-red { color: #bb3333; }
         .card-icons .card-black { color: #1a1a1a; }
 
-        #rules-modal .rank-name { font-weight: bold; color: #ffd700; font-size: 1.1em; }
-        #close-rules { float: right; cursor: pointer; color: #ffd700; font-size: 20px; }
+        #rules-modal .rank-name { font-weight: bold; color: var(--accent); font-size: 1.1em; }
+        #close-rules { float: right; cursor: pointer; color: var(--accent); font-size: 20px; }
 
         #history-panel { position: absolute; right: 20px; top: 20px; width: 280px; max-height: 40vh; overflow-y: auto; z-index: 10; }
         #controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 10; align-items: center; }
         
         .touch-btn { 
-            background: rgba(45, 25, 15, 0.6); border: 1px solid rgba(212, 175, 55, 0.4); padding: 12px 20px; 
-            color: #d4af37; font-weight: bold; border-radius: 6px; cursor: pointer; 
+            background: var(--btn-bg); border: 1px solid var(--btn-border); padding: 12px 20px; 
+            color: var(--btn-text); font-weight: bold; border-radius: 6px; cursor: pointer; 
             transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; min-width: 80px;
         }
         .touch-btn:hover:not(:disabled) { background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
         .touch-btn:disabled { opacity: 0.1; cursor: not-allowed; }
         
-        .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.2); }
-        .adjust-btn { background: none; border: none; color: gold; font-size: 20px; cursor: pointer; font-weight: bold; width: 30px; }
+        .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.18); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.12); }
+        .adjust-btn { background: none; border: none; color: var(--accent); font-size: 20px; cursor: pointer; font-weight: bold; width: 30px; }
         #raise-amount-display { min-width: 40px; text-align: center; font-weight: bold; color: #00ff00; }
 
         #btn-next { display: none; background: linear-gradient(135deg, #d4af37, #8c6b00); color: black; padding: 15px 40px; font-size: 1.2em; }
         
         .player-hud { position: absolute; pointer-events: none; transform: translate(-50%, -100%); text-align: center; }
-        .chip-display { color: #ffd1b3; font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(255, 140, 50, 0.4); }
+        .chip-display { color: var(--text); font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(0,0,0,0.25); }
         #game-msg { font-size: 1.1em; color: #ffd1b3; text-align: left; letter-spacing: 2px; }
+
+        #theme-toggle {
+            margin: 10px auto 0;
+            display: block;
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--btn-border);
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            cursor: pointer;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +225,7 @@
             <div id="game-msg">WAITING</div>
             <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
             <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
+            <button id="theme-toggle">Night Mode</button>
             <div id="rules-modal-anchor"></div>
         </div>
     </div>
@@ -356,6 +392,16 @@
         function wireMultiplayer() {
             if(!IS_MULTIPLAYER) return;
 
+            socket.on('you_state', ({ seatIdx, isHost: hostFlag }) => {
+                if (Number.isInteger(seatIdx) && seatIdx >= 0) {
+                    mySeatIdx = seatIdx;
+                    gameState.myPlayerIdx = seatIdx;
+                }
+                if (hostFlag !== null && hostFlag !== undefined) {
+                    isHost = !!hostFlag;
+                }
+            });
+
             socket.on('seat_taken', ({ seatIdx }) => {
                 mySeatIdx = seatIdx;
                 gameState.myPlayerIdx = seatIdx;
@@ -457,6 +503,10 @@
                     if (currentRaiseInput < gameState.minRaise) currentRaiseInput = gameState.minRaise;
                 }
                 document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
+                // 小提示：如果你没成功入座，按钮永远不会亮（避免“被跳过”的困惑）
+                if (IS_MULTIPLAYER && mySeatIdx === -1) {
+                    document.getElementById('game-msg').innerText = `${s.round}: Spectator (pick a seat before start)`;
+                }
                 // 控制区显示逻辑（联机）：HAND_OVER 才显示 Next Round；否则显示常规按钮并根据 activeSeatIdx 开关
                 const btnNext = document.getElementById('btn-next');
                 if (s.round === 'HAND_OVER') {
@@ -1709,6 +1759,31 @@
                 if (rulesModal.contains(target) || rulesBtn.contains(target)) return;
                 rulesModal.style.display = 'none';
             });
+
+            // Theme toggle (Night / Light)
+            const themeBtn = document.getElementById('theme-toggle');
+            const applyTheme = (mode) => {
+                document.documentElement.setAttribute('data-theme', mode);
+                localStorage.setItem('nebula_theme', mode);
+                themeBtn.innerText = (mode === 'light') ? 'Night Mode' : 'Light Mode';
+
+                // also adjust 3D background/fog a bit
+                if (scene) {
+                    if (mode === 'light') {
+                        scene.background = new THREE.Color(0xf6f3ea);
+                        scene.fog = new THREE.FogExp2(0xf6f3ea, 0.018);
+                    } else {
+                        scene.background = new THREE.Color(0x080401);
+                        scene.fog = new THREE.FogExp2(0x080401, 0.02);
+                    }
+                }
+            };
+            const savedTheme = localStorage.getItem('nebula_theme') || 'night';
+            applyTheme(savedTheme);
+            themeBtn.onclick = () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'night';
+                applyTheme(current === 'light' ? 'night' : 'light');
+            };
 
             document.getElementById('btn-plus').onclick = () => { currentRaiseInput += gameState.minRaise; updateUI(); };
             document.getElementById('btn-minus').onclick = () => { if(currentRaiseInput > gameState.minRaise) currentRaiseInput -= gameState.minRaise; updateUI(); };

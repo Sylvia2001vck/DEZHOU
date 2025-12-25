@@ -702,6 +702,15 @@ io.on("connection", (socket) => {
   socket.data.seatIdx = null;
   socket.data.name = null;
 
+  function emitYouState(room) {
+    if (!room) return;
+    socket.emit("you_state", {
+      roomId: room.roomId,
+      seatIdx: Number.isInteger(socket.data.seatIdx) ? socket.data.seatIdx : -1,
+      isHost: socket.id === room.hostSocketId
+    });
+  }
+
   socket.on("join_room", ({ roomId, name }) => {
     const rid = String(roomId || "").trim();
     const nm = String(name || "").trim() || "Player";
@@ -721,6 +730,7 @@ io.on("connection", (socket) => {
     socket.data.name = nm;
 
     socket.emit("room_state", getRoomSummary(room, socket.id));
+    emitYouState(room);
     broadcastRoom(room);
     broadcastGame(room);
   });
@@ -744,6 +754,7 @@ io.on("connection", (socket) => {
     room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player" };
     socket.data.seatIdx = idx;
     socket.emit("seat_taken", { seatIdx: idx });
+    emitYouState(room);
     ensurePlayersMap(room);
     broadcastRoom(room);
     broadcastGame(room);
