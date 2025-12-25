@@ -560,11 +560,11 @@ function requestTurn(room) {
 
   // ensure current active is something that still needs to act
   removeIneligibleFromPending(room);
-  if (!room.activeSeatIdx || !room.pendingActionSeats.has(room.activeSeatIdx)) {
+  if (room.activeSeatIdx === null || room.activeSeatIdx === undefined || !room.pendingActionSeats.has(room.activeSeatIdx)) {
     const any = chooseNextActor(room, room.activeSeatIdx ?? room.dealerSeatIdx);
     room.activeSeatIdx = any;
   }
-  if (!room.activeSeatIdx) {
+  if (room.activeSeatIdx === null || room.activeSeatIdx === undefined) {
     proceedToNextStreet(room);
     return;
   }
