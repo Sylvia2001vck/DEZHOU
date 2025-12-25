@@ -70,10 +70,15 @@ function seatToPublic(seat, seatIdx) {
 }
 
 function getRoomSummary(room, forSocketId) {
+  const hostSeatIdx = room.seats.findIndex(
+    (s) => s && s.type === "player" && s.socketId === room.hostSocketId
+  );
   return {
     roomId: room.roomId,
     hostSocketId: room.hostSocketId,
-    isHost: forSocketId === room.hostSocketId,
+    hostSeatIdx: hostSeatIdx >= 0 ? hostSeatIdx : null,
+    // broadcast 时不携带真假（否则会把 host 的 UI 覆盖成 false）；客户端用 hostSocketId vs socket.id 自行计算
+    isHost: forSocketId ? forSocketId === room.hostSocketId : null,
     started: room.started,
     seats: room.seats.map((s, i) => seatToPublic(s, i)),
     settings: { totalHands: room.totalHands, initialChips: room.initialChips }
@@ -658,7 +663,9 @@ io.on("connection", (socket) => {
       room = makeRoom(rid);
       rooms.set(rid, room);
     }
-    if (!room.hostSocketId) room.hostSocketId = socket.id;
+    // host 选举：如果没有 host 或 host socket 已不在线，则把当前加入者设为 host
+    const hostOnline = room.hostSocketId && io.sockets.sockets.has(room.hostSocketId);
+    if (!room.hostSocketId || !hostOnline) room.hostSocketId = socket.id;
 
     socket.join(rid);
     socket.data.roomId = rid;
