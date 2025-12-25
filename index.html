@@ -17,18 +17,31 @@
             --rules-bg: rgba(10, 5, 2, 0.85);
         }
         [data-theme="light"] {
-            --bg: #f6f3ea;
-            --text: #1b1b1b;
-            --panel-bg: rgba(255, 255, 255, 0.78);
-            --panel-border: rgba(20, 20, 20, 0.12);
-            --btn-bg: rgba(255, 255, 255, 0.85);
-            --btn-border: rgba(20, 20, 20, 0.18);
+            /* warm daylight (soft orange glow), not pure white */
+            --bg: #fff0db;
+            --text: #2a1a06;
+            --panel-bg: rgba(255, 242, 220, 0.78);
+            --panel-border: rgba(140, 90, 10, 0.18);
+            --btn-bg: rgba(255, 247, 232, 0.88);
+            --btn-border: rgba(140, 90, 10, 0.22);
             --btn-text: #3a2a00;
-            --accent: #a67c00;
-            --rules-bg: rgba(255, 255, 255, 0.92);
+            --accent: #b07d10;
+            --rules-bg: rgba(255, 245, 228, 0.92);
         }
 
         body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); }
+        /* Casino-style luxe background (CSS-only, no external image) for light mode */
+        [data-theme="light"] body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(1200px 800px at 20% 15%, rgba(255, 200, 110, 0.55), rgba(255, 200, 110, 0.0) 60%),
+                radial-gradient(900px 700px at 85% 25%, rgba(255, 170, 70, 0.45), rgba(255, 170, 70, 0.0) 60%),
+                radial-gradient(700px 600px at 65% 85%, rgba(180, 120, 30, 0.35), rgba(180, 120, 30, 0.0) 62%),
+                radial-gradient(420px 380px at 35% 60%, rgba(255, 240, 210, 0.35), rgba(255, 240, 210, 0.0) 70%),
+                repeating-linear-gradient(115deg, rgba(140, 90, 10, 0.08) 0 2px, rgba(255,255,255,0.0) 2px 14px),
+                linear-gradient(180deg, rgba(40, 20, 5, 0.10), rgba(255, 240, 219, 0.0) 40%, rgba(40, 20, 5, 0.10));
+            background-blend-mode: screen, screen, screen, screen, overlay, normal;
+        }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
         /* Lobby UI */
@@ -296,6 +309,7 @@
         const privateHandRenderToken = new Map(); // seatIdx -> number (cancel in-flight renders)
         let lastActionSeatIdx = null;
         let lastHandOverNum = null;
+        let potChipFX = []; // meshes for bet-to-pot animation
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
@@ -463,6 +477,8 @@
                         createFoldParticles(p);
                     }
                 }
+                // Multiplayer chips "give" FX: when someone CALL/RAISE/ALL-IN, fly gold chips to pot
+                animateBetToPot(seatIdx, text);
             });
 
             socket.on('hand_over', ({ handNum, totalHands, winners, desc }) => {
@@ -542,6 +558,7 @@
                     // 清空桌面牌与下注筹码
                     while(cardsGroup.children.length > 0) cardsGroup.remove(cardsGroup.children[0]);
                     while(chipsGroup.children.length > 0) chipsGroup.remove(chipsGroup.children[0]);
+                    potChipFX = [];
                     gameState.communityCards = [];
                     // 清掉每位玩家手牌 mesh（自己的牌会通过 private_hand 重发）
                     gameState.players.forEach(p => {
@@ -665,6 +682,46 @@
             el.style.display = 'block';
         }
 
+        function animateBetToPot(seatIdx, text) {
+            if (!IS_MULTIPLAYER) return;
+            const upper = String(text || '').toUpperCase();
+            if (!(upper.startsWith('CALL') || upper.startsWith('RAISE') || upper.startsWith('ALL-IN'))) return;
+
+            const p = gameState.players.find(pp => pp.id === seatIdx);
+            if (!p || !p.pos) return;
+
+            // parse amount (optional)
+            const m = String(text || '').match(/(\d+)/);
+            const amt = m ? Number(m[1]) : 50;
+            const chipCount = Math.max(1, Math.min(6, Math.floor((Number.isFinite(amt) ? amt : 50) / 50)));
+
+            for (let i = 0; i < chipCount; i++) {
+                const chip = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xd4af37, transparent: true, opacity: 0.55, metalness: 0.8, roughness: 0.15 })
+                );
+                chip.position.set(p.pos.x, 0.08, p.pos.z);
+                chip.rotation.x = Math.PI / 2;
+                chipsGroup.add(chip);
+                potChipFX.push(chip);
+
+                const tx = (Math.random() - 0.5) * 0.8;
+                const tz = (Math.random() - 0.5) * 0.8;
+                gsap.to(chip.position, {
+                    x: tx,
+                    z: tz,
+                    y: 0.05,
+                    duration: 0.65 + Math.random() * 0.15,
+                    ease: "power2.out"
+                });
+                gsap.to(chip.material, {
+                    opacity: 0.25,
+                    duration: 0.65,
+                    ease: "power1.out"
+                });
+            }
+        }
+
         function setupBase() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x080401);
@@ -672,10 +729,12 @@
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 11, 15);
             camera.lookAt(0, 0, 0);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // alpha:true so light-mode can show the CSS casino background behind the 3D scene
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.setClearColor(0x000000, 1);
             document.getElementById('container').appendChild(renderer.domElement);
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
@@ -698,6 +757,9 @@
             whiteSpot.penumbra = 0.3;
             whiteSpot.decay = 1.5;
             whiteSpot.distance = 40;
+            // 更柔和、垂直落在桌面中心（避免“歪的/黑斑”观感）
+            whiteSpot.target.position.set(0, 0, 0);
+            scene.add(whiteSpot.target);
             scene.add(whiteSpot);
             
             // 辅助点光源增加中心高光
@@ -707,38 +769,75 @@
         }
 
         function setupAtmosphere() {
-            // 恢复金色星辰特效 - 低饱和度、温柔富贵感
-            const count = 12000;
-            const geo = new THREE.BufferGeometry();
-            const pos = new Float32Array(count * 3);
-            const colors = new Float32Array(count * 3);
-            
+            // 夜间更梦幻：两层星海（超细密 + 亮点缀）
+            const group = new THREE.Group();
+
             const colorPaleGold = new THREE.Color(0xd4af37).convertSRGBToLinear();
             const colorSoftWhite = new THREE.Color(0xfffdf0).convertSRGBToLinear();
 
-            for(let i=0; i<count; i++) {
-                const r = 15 + Math.random() * 40;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                
-                pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
-                pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-                pos[i*3+2] = r * Math.cos(phi);
-                
-                const c = colorPaleGold.clone().lerp(colorSoftWhite, Math.random() * 0.6);
-                colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+            // Layer A: very fine dense stars
+            {
+                const count = 26000;
+                const geo = new THREE.BufferGeometry();
+                const pos = new Float32Array(count * 3);
+                const colors = new Float32Array(count * 3);
+                for(let i=0; i<count; i++) {
+                    const r = 14 + Math.random() * 46;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                    pos[i*3+2] = r * Math.cos(phi);
+
+                    const c = colorPaleGold.clone().lerp(colorSoftWhite, Math.random() * 0.45);
+                    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                const mat = new THREE.PointsMaterial({
+                    size: 0.065,
+                    sizeAttenuation: true,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.55,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                group.add(new THREE.Points(geo, mat));
             }
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            
-            starField = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 0.12, 
-                vertexColors: true, 
-                transparent: true, 
-                opacity: 0.35, 
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            }));
+
+            // Layer B: brighter sparkle accents
+            {
+                const count = 4200;
+                const geo = new THREE.BufferGeometry();
+                const pos = new Float32Array(count * 3);
+                const colors = new Float32Array(count * 3);
+                for(let i=0; i<count; i++) {
+                    const r = 12 + Math.random() * 42;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                    pos[i*3+2] = r * Math.cos(phi);
+
+                    const c = colorSoftWhite.clone().lerp(colorPaleGold, Math.random() * 0.25);
+                    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                const mat = new THREE.PointsMaterial({
+                    size: 0.14,
+                    sizeAttenuation: true,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.22,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                group.add(new THREE.Points(geo, mat));
+            }
+
+            starField = group;
             environmentGroup.add(starField);
         }
 
@@ -758,6 +857,40 @@
             const tableMesh = new THREE.Mesh(tableGeo, tableMat);
             tableMesh.position.y = -thickness / 2;
             tableGroup.add(tableMesh);
+
+            // 1.5 桌边柔光金色圈（区分背景，低饱和度微光）
+            const rimY = 0.035;
+            const rimRadius = radius * 0.97;
+            const rim = new THREE.Mesh(
+                new THREE.TorusGeometry(rimRadius, 0.06, 16, 128),
+                new THREE.MeshStandardMaterial({
+                    color: 0x6b4e16,          // 浅棕金底
+                    metalness: 0.6,
+                    roughness: 0.35,
+                    emissive: 0xffe7b0,       // 浅黄色柔光
+                    emissiveIntensity: 0.85,
+                    transparent: true,
+                    opacity: 0.55
+                })
+            );
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = rimY;
+            tableGroup.add(rim);
+
+            // 外侧更柔的光晕（不刺眼）
+            const halo = new THREE.Mesh(
+                new THREE.TorusGeometry(rimRadius + 0.08, 0.11, 16, 128),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffe2a3,
+                    transparent: true,
+                    opacity: 0.10,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+            halo.rotation.x = Math.PI / 2;
+            halo.position.y = rimY + 0.01;
+            tableGroup.add(halo);
 
             // 2. 桌面中心的绿色丝绒底
             const feltGeo = new THREE.CircleGeometry(radius * 0.95, 64);
@@ -1021,12 +1154,19 @@
 
             return new Promise(r => {
                 gsap.to(mesh.position, { x: target.x, y: target.y, z: target.z, duration: 0.6, onComplete: r });
-                // 统一旋转逻辑：
-                // 1. 先绕 Y 旋转到玩家角度，使其“面向”玩家
-                // 2. 绕 X 旋转 0.5，使其顶端（远离玩家一端）翘起，底端（靠近桌边一端）下压
+                // 统一旋转逻辑（修复：所有牌都朝“桌子边缘”掀起，不侧着掀）
+                // 使用 YXZ，让“先Yaw到面向玩家，再Pitch掀起”在所有玩家上方向一致
+                mesh.rotation.order = 'YXZ';
+                // 让每一张牌都朝“该座位方向”掀起：用“牌 -> 筹码堆(或玩家位置)”的方向来确定 yaw
+                const ref = (player.stackGroup && player.stackGroup.position) ? player.stackGroup.position : player.pos;
+                const dx = ref.x - target.x;
+                const dz = ref.z - target.z;
+                const yawToSeat = Math.atan2(dx, dz);
                 gsap.to(mesh.rotation, { 
-                    y: player.angle, 
-                    x: 0.5, 
+                    y: yawToSeat,
+                    // 正值：让靠座位/玩家一侧压低，靠桌子中心一侧抬高
+                    x: 0.55,
+                    z: 0,
                     duration: 0.6 
                 });
             });
@@ -1770,11 +1910,17 @@
                 // also adjust 3D background/fog a bit
                 if (scene) {
                     if (mode === 'light') {
-                        scene.background = new THREE.Color(0xf6f3ea);
-                        scene.fog = new THREE.FogExp2(0xf6f3ea, 0.018);
+                        // warm daylight, soft orange glow
+                        // make 3D clear transparent so CSS casino background is visible
+                        scene.background = null;
+                        scene.fog = new THREE.FogExp2(0xfff0db, 0.016);
+                        if (renderer) renderer.setClearColor(0x000000, 0);
+                        if (starField) starField.visible = false;
                     } else {
                         scene.background = new THREE.Color(0x080401);
                         scene.fog = new THREE.FogExp2(0x080401, 0.02);
+                        if (renderer) renderer.setClearColor(0x000000, 1);
+                        if (starField) starField.visible = true;
                     }
                 }
             };
