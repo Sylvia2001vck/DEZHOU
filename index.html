@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Poker - Advanced Pro</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #020105; font-family: 'Segoe UI', sans-serif; color: #ffebcc; }
+        #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* Lobby UI */
+        #lobby-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(15px); }
+        .lobby-panel { background: rgba(30, 20, 10, 0.95); border: 1px solid #d4af37; padding: 30px; border-radius: 20px; box-shadow: 0 0 50px rgba(212, 175, 55, 0.3); text-align: center; width: 400px; max-height: 90vh; overflow-y: auto; }
+        .lobby-input-group { text-align: left; margin-bottom: 15px; }
+        .lobby-label { color: #d4af37; font-size: 0.9em; margin-bottom: 5px; display: block; }
+        .lobby-input { width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #d4af37; color: gold; border-radius: 6px; box-sizing: border-box; }
+        .lobby-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #d4af37, #8c6b00); border: none; color: black; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        
+        /* Seat Selection UI */
+        #seat-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 900; backdrop-filter: blur(5px); }
+        .seat-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; width: 900px; }
+        .seat-box { background: rgba(40, 30, 20, 0.85); border: 2px solid #d4af37; border-radius: 12px; padding: 12px; transition: 0.3s; color: gold; text-align: center; }
+        .seat-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .seat-action-btn { padding: 8px; font-size: 0.8em; border-radius: 4px; cursor: pointer; border: 1px solid gold; background: rgba(212, 175, 55, 0.1); color: gold; }
+        .seat-action-btn:hover { background: gold; color: black; }
+        .seat-action-btn.active { background: gold; color: black; }
+        .start-game-area { position: absolute; bottom: -80px; left: 0; width: 100%; text-align: center; }
+
+        /* Summary UI */
+        #summary-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 10, 5, 0.98); border: 2px solid gold; padding: 40px; border-radius: 20px; z-index: 2000; width: 450px; text-align: center; }
+        .summary-list { margin: 20px 0; border-top: 1px solid rgba(212, 175, 55, 0.3); }
+        .summary-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        #ui-overlay { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; width: 100%; }
+        .panel { background: rgba(25, 12, 5, 0.7); padding: 15px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.3); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+        
+        /* Rules Modal */
+        #rules-btn { position: absolute; top: 20px; left: 20px; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: #ffd700; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
+        #rules-btn:hover { background: rgba(212, 175, 55, 0.4); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+        #rules-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 5, 2, 0.95); border: 1px solid #ffd700; padding: 30px; border-radius: 15px; z-index: 100; width: 400px; max-height: 80vh; overflow-y: auto; backdrop-filter: blur(20px); color: #fff; box-shadow: 0 0 50px rgba(212, 175, 55, 0.2); }
+        #rules-modal h2 { color: #ffd700; margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px; }
+        #rules-modal ul { list-style: none; padding: 0; }
+        #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
+        
+        .rule-item { margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.1); padding-bottom: 10px; }
+        .card-icons { display: flex; gap: 5px; margin-top: 5px; }
+        .card-icons span { background: #fff; color: #000; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-family: serif; min-width: 25px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .card-icons .card-red { color: #bb3333; }
+        .card-icons .card-black { color: #1a1a1a; }
+
+        #rules-modal .rank-name { font-weight: bold; color: #ffd700; font-size: 1.1em; }
+        #close-rules { float: right; cursor: pointer; color: #ffd700; font-size: 20px; }
+
+        #history-panel { position: absolute; right: 20px; top: 20px; width: 280px; max-height: 40vh; overflow-y: auto; z-index: 10; }
+        #controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 10; align-items: center; }
+        
+        .touch-btn { 
+            background: rgba(45, 25, 15, 0.6); border: 1px solid rgba(212, 175, 55, 0.4); padding: 12px 20px; 
+            color: #d4af37; font-weight: bold; border-radius: 6px; cursor: pointer; 
+            transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; min-width: 80px;
+        }
+        .touch-btn:hover:not(:disabled) { background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
+        .touch-btn:disabled { opacity: 0.1; cursor: not-allowed; }
+        
+        .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.2); }
+        .adjust-btn { background: none; border: none; color: gold; font-size: 20px; cursor: pointer; font-weight: bold; width: 30px; }
+        #raise-amount-display { min-width: 40px; text-align: center; font-weight: bold; color: #00ff00; }
+
+        #btn-next { display: none; background: linear-gradient(135deg, #d4af37, #8c6b00); color: black; padding: 15px 40px; font-size: 1.2em; }
+        
+        .player-hud { position: absolute; pointer-events: none; transform: translate(-50%, -100%); text-align: center; }
+        .chip-display { color: #ffd1b3; font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(255, 140, 50, 0.4); }
+        #game-msg { font-size: 1.3em; color: #ffd1b3; text-align: center; letter-spacing: 4px; }
+    </style>
+</head>
+<body>
+    <div id="lobby-overlay">
+        <div class="lobby-panel">
+            <h1 style="color: gold; margin-bottom: 20px; font-size: 1.8em;">NEBULA POKER</h1>
+            <div class="lobby-input-group">
+                <label class="lobby-label">YOUR NAME</label>
+                <input type="text" id="username-input" class="lobby-input" placeholder="e.g. StarLord">
+            </div>
+            <div class="lobby-input-group">
+                <label class="lobby-label">ROOM ID</label>
+                <input type="text" id="room-id-input" class="lobby-input" placeholder="Room 101">
+            </div>
+            <div class="lobby-input-group">
+                <label class="lobby-label">INITIAL CHIPS (Min 1000, Multiples of 50)</label>
+                <input type="number" id="init-chips-input" class="lobby-input" value="1000" step="50" min="1000">
+            </div>
+            <div class="lobby-input-group" id="rounds-group">
+                <label class="lobby-label">TOTAL ROUNDS</label>
+                <input type="number" id="total-rounds-input" class="lobby-input" value="5" min="1">
+            </div>
+            <button id="lobby-next-btn" class="lobby-btn">Continue to Select Seat</button>
+        </div>
+    </div>
+
+    <div id="seat-overlay">
+        <h2 style="color: gold; text-align: center; margin-top: 50px;">SEAT SELECTION</h2>
+        <div class="seat-container">
+            <div id="seat-grid" style="display: contents;"></div>
+            <div class="start-game-area">
+                <button id="start-game-btn" class="lobby-btn" style="width: 300px;">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="summary-modal">
+        <h2 style="color: gold;">HAND OVER</h2>
+        <p style="color: rgba(212, 175, 55, 0.6);">Final Chip Standings</p>
+        <div class="summary-list" id="summary-list-content"></div>
+        <button onclick="location.reload()" class="lobby-btn">Back to Lobby</button>
+    </div>
+
+    <div id="container"></div>
+    <div id="labels-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></div>
+    
+    <button id="rules-btn">Rules & Rankings</button>
+    <div id="rules-modal">
+        <span id="close-rules">&times;</span>
+        <h2 style="text-align: center;">Hand Rankings</h2>
+        <div style="font-size: 0.85em;">
+            <div class="rule-item">
+                <span class="rank-name">Royal Flush</span>
+                <div class="card-icons">
+                    <span class="card-black">A♠</span><span class="card-black">K♠</span><span class="card-black">Q♠</span><span class="card-black">J♠</span><span class="card-black">10♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Straight Flush</span>
+                <div class="card-icons">
+                    <span class="card-red">9♥</span><span class="card-red">8♥</span><span class="card-red">7♥</span><span class="card-red">6♥</span><span class="card-red">5♥</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Four of a Kind</span>
+                <div class="card-icons">
+                    <span class="card-black">A♠</span><span class="card-red">A♥</span><span class="card-black">A♣</span><span class="card-red">A♦</span><span class="card-black">K♣</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Full House</span>
+                <div class="card-icons">
+                    <span class="card-black">K♠</span><span class="card-red">K♥</span><span class="card-black">K♣</span><span class="card-red">Q♦</span><span class="card-black">Q♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Flush</span>
+                <div class="card-icons">
+                    <span class="card-black">A♣</span><span class="card-black">J♣</span><span class="card-black">8♣</span><span class="card-black">4♣</span><span class="card-black">2♣</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Straight</span>
+                <div class="card-icons">
+                    <span class="card-black">5♠</span><span class="card-red">4♥</span><span class="card-black">3♣</span><span class="card-red">2♦</span><span class="card-black">A♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Three of a Kind</span>
+                <div class="card-icons">
+                    <span class="card-black">Q♠</span><span class="card-red">Q♥</span><span class="card-black">Q♣</span><span class="card-red">8♦</span><span class="card-black">2♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">Two Pair</span>
+                <div class="card-icons">
+                    <span class="card-black">J♠</span><span class="card-red">J♥</span><span class="card-black">9♣</span><span class="card-red">9♦</span><span class="card-black">4♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">One Pair</span>
+                <div class="card-icons">
+                    <span class="card-black">10♠</span><span class="card-red">10♥</span><span class="card-black">A♣</span><span class="card-red">8♦</span><span class="card-black">3♠</span>
+                </div>
+            </div>
+            <div class="rule-item">
+                <span class="rank-name">High Card</span>
+                <div class="card-icons">
+                    <span class="card-black">A♠</span><span class="card-red">Q♥</span><span class="card-black">10♣</span><span class="card-red">7♦</span><span class="card-black">2♠</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-overlay">
+        <div class="panel" style="width: 240px; margin-left: 150px;">
+            <div id="game-msg">WAITING</div>
+            <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
+        </div>
+    </div>
+
+    <div id="history-panel" class="panel">
+        <h3 style="margin: 0 0 10px 0; font-size: 0.9em; color: rgba(212, 175, 55, 0.6);">ACTIVITY</h3>
+        <div id="history-list" style="font-size: 0.8em; line-height: 1.6;"></div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-fold" class="touch-btn">Fold</button>
+        <button id="btn-check" class="touch-btn">Check</button>
+        <div class="adjust-panel">
+            <button id="btn-minus" class="adjust-btn">-</button>
+            <span id="raise-amount-display">50</span>
+            <button id="btn-plus" class="adjust-btn">+</button>
+        </div>
+        <button id="btn-raise" class="touch-btn">Raise</button>
+        <button id="btn-allin" class="touch-btn" style="color:#ff4444;">All-in</button>
+        <button id="btn-next" class="touch-btn">Confirm & Next Round</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- socket.io client (served by our Node backend when deployed) -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const CONFIG = {
+            numPlayers: 10,
+            cardWidth: 0.7, cardHeight: 1.0,
+            theme: { 
+                orange: 0xff8c1a, 
+                gold: 0xffd700, 
+                pink: 0xff99cc, 
+                warmYellow: 0xffe0b3,
+                purple: 0x8a2be2,
+                blue: 0x0000ff
+            },
+            chipValue: 50
+        };
+
+        let scene, camera, renderer, controls;
+        let cardsGroup, chipsGroup, tableGroup, environmentGroup, playerStacksGroup;
+        let nebulaParticles = null;
+        let starField = null;
+        let tableParticles = null;
+        let hudData = [];
+        let currentRaiseInput = 50;
+        
+        const BUILD_TAG = `build-${new Date().toISOString()}`;
+        const IS_MULTIPLAYER = (location.protocol !== 'file:') && (typeof window.io === 'function');
+        const socket = IS_MULTIPLAYER ? window.io() : null;
+        let mySeatIdx = -1;
+        let isHost = false;
+
+        function dbg(msg) {
+            // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
+            try { addToHistory(`[DBG] ${msg}`); } catch(_) {}
+        }
+
+        const gameState = {
+            players: [], pot: 0, dealerIdx: 0, deck: [],
+            communityCards: [], round: 'WAITING', activeIdx: 0,
+            currentMaxBet: 100, isGameOver: false,
+            smallBlind: 50, bigBlind: 100,
+            minRaise: 100,
+            numActionThisRound: 0,
+            currentRoundNum: 0,
+            totalRounds: 5,
+            initialChips: 1000,
+            myPlayerIdx: -1,
+            seatConfig: Array(10).fill(null), // null: Empty, 'player': YOU, 'ai': AI
+            isProcessing: false, // 动作锁，防止快速重复触发
+            processingSince: 0  // 记录动作锁开始时间，用于watchdog兜底
+        };
+
+        // 返回从 startSeatIdx 开始，向前数 offset 个“有效玩家座位”的 seatIdx（用于 SB/BB/UTG 等）
+        // 有效：seatConfig 有人 + 对应 player 存在 + 未破产/仍有筹码
+        function getActiveOffset(startSeatIdx, offset) {
+            const getSeatPlayer = (seatIdx) => gameState.players.find(p => p.id === seatIdx);
+            const isSeatEligible = (seatIdx) => {
+                if(!gameState.seatConfig[seatIdx]) return false;
+                const p = getSeatPlayer(seatIdx);
+                if(!p) return false;
+                return !p.isBankrupt && p.chips > 0;
+            };
+
+            let count = 0;
+            let idx = startSeatIdx;
+            let loops = 0;
+            const maxLoops = CONFIG.numPlayers * 3;
+            while(count < offset && loops < maxLoops) {
+                idx = (idx + 1) % CONFIG.numPlayers;
+                if(isSeatEligible(idx)) count++;
+                loops++;
+            }
+            return idx;
+        }
+
+        // 全局错误捕获：如果某个 AI 动作抛异常导致逻辑中断，这里会把原因打到控制台 + ACTIVITY
+        window.addEventListener('error', (e) => {
+            try {
+                console.error('[GLOBAL ERROR]', e?.error || e);
+                addToHistory(`ERROR: ${e?.message || 'Unknown error'}`);
+                gameState.isProcessing = false;
+            } catch(_) {}
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            try {
+                console.error('[UNHANDLED REJECTION]', e?.reason || e);
+                addToHistory(`ERROR: ${e?.reason?.message || e?.reason || 'Unhandled rejection'}`);
+                gameState.isProcessing = false;
+            } catch(_) {}
+        });
+
+        function init() {
+            setupBase();
+            setupLights();
+            setupAtmosphere();
+            createTable();
+            // 不再直接调用 createPlayers，由选座流程控制
+            setupEvents();
+            // 页面右下角显示 build tag，确认你加载的是最新文件
+            const buildEl = document.createElement('div');
+            buildEl.id = 'build-tag';
+            buildEl.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9999;font:12px/1.2 monospace;color:rgba(255,215,0,0.7);pointer-events:none;';
+            buildEl.textContent = BUILD_TAG;
+            document.body.appendChild(buildEl);
+
+            // 全局 watchdog：不依赖 checkTurn 被调用。只要锁住太久，自动解锁并推进一次。
+            setInterval(() => {
+                if (gameState.isGameOver) return;
+                if (gameState.round === 'WAITING') return;
+                if (gameState.isProcessing && (Date.now() - (gameState.processingSince || 0) > 3000)) {
+                    console.warn('[WATCHDOG_INTERVAL] Force unlock + nextStep');
+                    dbg('watchdog unlock');
+                    gameState.isProcessing = false;
+                    gameState.processingSince = 0;
+                    try { nextStep(); } catch(e) { console.error('[WATCHDOG nextStep error]', e); }
+                }
+            }, 500);
+            animate();
+        }
+
+        function wireMultiplayer() {
+            if(!IS_MULTIPLAYER) return;
+
+            socket.on('room_state', (state) => {
+                isHost = !!state.isHost;
+                // 同步 seats 到本地 seatConfig：player/ai/null
+                gameState.seatConfig = Array(CONFIG.numPlayers).fill(null);
+                (state.seats || []).forEach(s => {
+                    if(!s) return;
+                    gameState.seatConfig[s.seatIdx] = (s.type === 'ai') ? 'ai' : 'player';
+                });
+                updateSeatOverlayFromServer(state);
+            });
+
+            socket.on('activity', (msg) => addToHistory(msg));
+            socket.on('error_msg', ({msg}) => alert(msg));
+
+            socket.on('private_hand', ({ seatIdx, hand }) => {
+                // 只会发给自己
+                const me = gameState.players.find(p => p.id === seatIdx);
+                if(!me) return;
+                me.hand = hand;
+                // 重渲染自己的两张牌（简单处理：清空再发）
+                me.meshCards.forEach(m => cardsGroup.remove(m));
+                me.meshCards = [];
+                // 发两张牌到自己位置
+                (hand || []).forEach(async (card) => {
+                    await dealCardAnim(card, me, true);
+                });
+            });
+
+            socket.on('game_state', (s) => {
+                // 只做 UI/渲染同步（逻辑以服务端为准）
+                gameState.round = s.round;
+                gameState.pot = s.pot;
+                gameState.currentMaxBet = s.currentMaxBet;
+                document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
+                // 同步玩家筹码/弃牌
+                (s.players || []).forEach(sp => {
+                    const p = gameState.players.find(pp => pp.id === sp.seatIdx);
+                    if(!p) return;
+                    p.chips = sp.chips;
+                    p.currentBet = sp.currentBet;
+                    p.isFolded = sp.isFolded;
+                    p.isBankrupt = sp.isBankrupt;
+                });
+                updateUI();
+
+                // 同步公共牌：只补差量
+                const target = s.communityCards || [];
+                while(gameState.communityCards.length < target.length) {
+                    const card = target[gameState.communityCards.length];
+                    gameState.communityCards.push(card);
+                    // 直接在桌面渲染一张（不走本地逻辑）
+                    const mesh = createCardMesh(card, true);
+                    mesh.position.set(0, 0.18, 0);
+                    mesh.rotation.set(0,0,0);
+                    cardsGroup.add(mesh);
+                    gsap.fromTo(mesh.position, {y: 5}, {y: 0.18, duration: 0.5});
+                    gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, z: 0, duration: 0.5 });
+                }
+            });
+
+            socket.on('turn', ({ activeSeatIdx }) => {
+                // 轮到我则开按钮，否则关
+                toggleButtons(activeSeatIdx === mySeatIdx);
+            });
+        }
+
+        function setupBase() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080401);
+            scene.fog = new THREE.FogExp2(0x080401, 0.02);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 11, 15);
+            camera.lookAt(0, 0, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            document.getElementById('container').appendChild(renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            cardsGroup = new THREE.Group();
+            chipsGroup = new THREE.Group();
+            tableGroup = new THREE.Group();
+            environmentGroup = new THREE.Group();
+            playerStacksGroup = new THREE.Group();
+            scene.add(cardsGroup, chipsGroup, tableGroup, environmentGroup, playerStacksGroup);
+        }
+
+        function setupLights() {
+            // 基础暗光
+            scene.add(new THREE.AmbientLight(0xffffff, 0.05));
+            
+            // 强力垂直白色聚光灯 - 产生高级感反光
+            const whiteSpot = new THREE.SpotLight(0xffffff, 100);
+            whiteSpot.position.set(0, 12, 0);
+            whiteSpot.angle = Math.PI / 8;
+            whiteSpot.penumbra = 0.3;
+            whiteSpot.decay = 1.5;
+            whiteSpot.distance = 40;
+            scene.add(whiteSpot);
+            
+            // 辅助点光源增加中心高光
+            const rimLight = new THREE.PointLight(0xffffff, 10, 10);
+            rimLight.position.set(0, 5, 0);
+            scene.add(rimLight);
+        }
+
+        function setupAtmosphere() {
+            // 恢复金色星辰特效 - 低饱和度、温柔富贵感
+            const count = 12000;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            
+            const colorPaleGold = new THREE.Color(0xd4af37).convertSRGBToLinear();
+            const colorSoftWhite = new THREE.Color(0xfffdf0).convertSRGBToLinear();
+
+            for(let i=0; i<count; i++) {
+                const r = 15 + Math.random() * 40;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+                pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+                pos[i*3+2] = r * Math.cos(phi);
+                
+                const c = colorPaleGold.clone().lerp(colorSoftWhite, Math.random() * 0.6);
+                colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            starField = new THREE.Points(geo, new THREE.PointsMaterial({ 
+                size: 0.12, 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.35, 
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            }));
+            environmentGroup.add(starField);
+        }
+
+        function createTable() {
+            // 具有厚度的实体金属牌桌 + 绿色底面 (稍微增大半径以容纳10人)
+            const radius = 7.0; 
+            const thickness = 0.8;
+            
+            // 1. 桌面主体 (金属边框/侧面)
+            const tableGeo = new THREE.CylinderGeometry(radius, radius, thickness, 64);
+            const tableMat = new THREE.MeshStandardMaterial({ 
+                color: 0x111111,
+                metalness: 1.0,
+                roughness: 0.1,
+                envMapIntensity: 1.5
+            });
+            const tableMesh = new THREE.Mesh(tableGeo, tableMat);
+            tableMesh.position.y = -thickness / 2;
+            tableGroup.add(tableMesh);
+
+            // 2. 桌面中心的绿色丝绒底
+            const feltGeo = new THREE.CircleGeometry(radius * 0.95, 64);
+            const feltMat = new THREE.MeshStandardMaterial({ 
+                color: 0x0a2a0a, // 深绿色
+                roughness: 0.8,
+                metalness: 0.2,
+                emissive: 0x051505, // 微微发绿光
+                emissiveIntensity: 0.5
+            });
+            const felt = new THREE.Mesh(feltGeo, feltMat);
+            felt.rotation.x = -Math.PI/2;
+            felt.position.y = 0.005; // 略高于金属桌面
+            tableGroup.add(felt);
+
+            // 3. 装饰粒子
+            const particleCount = 8000;
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount; i++) {
+                const r = Math.sqrt(Math.random()) * radius;
+                const angle = Math.random() * Math.PI * 2;
+                pPos[i*3] = Math.cos(angle) * r;
+                pPos[i*3+1] = 0.02;
+                pPos[i*3+2] = Math.sin(angle) * r;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0xd4af37, size: 0.015, transparent: true, opacity: 0.25 });
+            tableParticles = new THREE.Points(pGeo, pMat);
+            tableGroup.add(tableParticles);
+        }
+
+        function createPlayers() {
+            const container = document.getElementById('labels-container');
+            gameState.players = [];
+            hudData = []; // 清空 HUD
+            while(container.firstChild) container.removeChild(container.firstChild);
+            while(playerStacksGroup.children.length > 0) playerStacksGroup.remove(playerStacksGroup.children[0]);
+
+            // 1. 过滤出被占用的座位，保持原本的物理顺序
+            const occupied = [];
+            for (let i = 0; i < CONFIG.numPlayers; i++) {
+                if (gameState.seatConfig[i]) {
+                    occupied.push({ seatIdx: i, type: gameState.seatConfig[i] });
+                }
+            }
+
+            const totalActive = occupied.length;
+            if (totalActive === 0) return;
+
+            // 2. 找到“我”在被占用座位中的顺序索引
+            const myOrderIdx = occupied.findIndex(s => s.seatIdx === gameState.myPlayerIdx);
+
+            // 3. 根据活跃人数均匀分配角度，并以“我”为中心
+            occupied.forEach((seat, orderIdx) => {
+                const relativeIdx = (orderIdx - myOrderIdx + totalActive) % totalActive;
+                const visualAngle = (relativeIdx / totalActive) * Math.PI * 2;
+                const pos = new THREE.Vector3(Math.sin(visualAngle) * 6.0, 0.05, Math.cos(visualAngle) * 6.0);
+                
+                const stackGroup = new THREE.Group();
+                stackGroup.position.copy(pos);
+                stackGroup.position.add(new THREE.Vector3(Math.sin(visualAngle)*0.8, 0, Math.cos(visualAngle)*0.8));
+                playerStacksGroup.add(stackGroup);
+
+                let pName = seat.type === 'player' ? (document.getElementById('username-input').value || "YOU") : `AI-${seat.seatIdx}`;
+                let pChips = gameState.initialChips;
+
+                const playerObj = { 
+                    id: seat.seatIdx, // 逻辑上的座位ID
+                    name: pName, 
+                    chips: pChips, currentBet: 0, pos: pos, 
+                    angle: visualAngle, hand: [], isFolded: false, 
+                    meshCards: [], stackGroup: stackGroup,
+                    isBankrupt: false,
+                    isAI: seat.type === 'ai'
+                };
+                gameState.players.push(playerObj);
+                
+                const hud = document.createElement('div');
+                hud.className = 'player-hud';
+                // 在 HUD 中显示玩家 ID 和名字
+                hud.innerHTML = `
+                    <div style="font-size: 10px; opacity: 0.6; color: gold;">ID: ${seat.seatIdx}</div>
+                    <div style="color: white; font-weight: bold;">${pName}</div>
+                    <div id="chips-${seat.seatIdx}" class="chip-display">$${pChips}</div>
+                `;
+                container.appendChild(hud);
+                hudData.push({ el: hud, pos: pos.clone().add(new THREE.Vector3(0, 1.5, 0)) });
+                
+                updatePlayerStackMesh(playerObj);
+            });
+        }
+
+        function updatePlayerStackMesh(player) {
+            const group = player.stackGroup;
+            while(group.children.length > 0) group.remove(group.children[0]);
+            
+            let totalChipCount = Math.floor(player.chips / CONFIG.chipValue);
+            if (player.chips > 0 && totalChipCount === 0) totalChipCount = 1;
+            
+            const maxPerStack = 10;
+            const numStacks = Math.ceil(totalChipCount / maxPerStack);
+            
+            let remaining = totalChipCount;
+            for(let s=0; s<numStacks; s++) {
+                const countInStack = Math.min(remaining, maxPerStack);
+                remaining -= countInStack;
+
+                const stackOffset = (s - (numStacks-1)/2) * 0.45;
+                const ox = Math.cos(player.angle) * stackOffset;
+                const oz = -Math.sin(player.angle) * stackOffset;
+                
+                for(let j=0; j<countInStack; j++) {
+                    const chipGroup = new THREE.Group();
+                    chipGroup.position.set(ox, j * 0.055, oz);
+                    
+                    // 1. 半透明筹码主体
+                    const chipBody = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), 
+                        new THREE.MeshStandardMaterial({ 
+                            color: 0xc5a059,
+                            metalness: 0.5,
+                            roughness: 0.1,
+                            transparent: true,
+                            opacity: 0.6, // 变得透明
+                            emissive: 0xd4af37,
+                            emissiveIntensity: 0.1
+                        })
+                    );
+                    chipGroup.add(chipBody);
+                    
+                    // 2. 边缘粒子特效
+                    const pGeo = new THREE.BufferGeometry();
+                    const pCount = 30;
+                    const pPos = new Float32Array(pCount * 3);
+                    for(let k=0; k<pCount; k++) {
+                        const angle = (k / pCount) * Math.PI * 2;
+                        pPos[k*3] = Math.cos(angle) * 0.21; // 略大于筹码半径
+                        pPos[k*3+1] = (Math.random()-0.5) * 0.05;
+                        pPos[k*3+2] = Math.sin(angle) * 0.21;
+                    }
+                    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+                    const pMat = new THREE.PointsMaterial({ color: 0xffd700, size: 0.015, transparent: true, opacity: 0.8 });
+                    chipGroup.add(new THREE.Points(pGeo, pMat));
+                    
+                    group.add(chipGroup);
+                }
+            }
+        }
+
+        async function startNewHand() {
+            if(gameState.currentRoundNum >= gameState.totalRounds) {
+                showFinalSummary();
+                return;
+            }
+            // 检查剩余有钱的玩家
+            const activeCount = gameState.players.filter(p => p.chips > 0).length;
+            if (activeCount < 2) {
+                alert("Game Over! Not enough players with chips.");
+                showFinalSummary();
+                return;
+            }
+
+            gameState.currentRoundNum++;
+            
+            // 物理级销毁旧物体
+            while(cardsGroup.children.length > 0) cardsGroup.remove(cardsGroup.children[0]);
+            while(chipsGroup.children.length > 0) chipsGroup.remove(chipsGroup.children[0]);
+            
+            gameState.deck = [];
+            const rks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+            const sts = ['hearts', 'diamonds', 'clubs', 'spades'];
+            for(let s of sts) for(let r of rks) gameState.deck.push({s, r, v: rks.indexOf(r)});
+            for(let i=gameState.deck.length-1; i>0; i--) {
+                const j = Math.floor(Math.random()*(i+1));
+                [gameState.deck[i], gameState.deck[j]] = [gameState.deck[j], gameState.deck[i]];
+            }
+            gameState.round = 'PRE-FLOP'; gameState.pot = 0; gameState.communityCards = [];
+            
+            // 检查破产
+            gameState.players.forEach(p => { 
+                p.hand = []; 
+                p.isFolded = p.chips <= 0; 
+                if(p.chips <= 0) p.isBankrupt = true;
+                p.currentBet = 0; 
+                p.meshCards = []; 
+            });
+
+            gameState.isGameOver = false;
+            gameState.currentMaxBet = gameState.bigBlind;
+            gameState.numActionThisRound = 0;
+            currentRaiseInput = gameState.minRaise;
+            
+            document.getElementById('btn-next').style.display = 'none';
+            document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'block');
+            
+            updateUI();
+            addToHistory(`--- HAND ${gameState.currentRoundNum} / ${gameState.totalRounds} ---`);
+            
+            // 强制下盲注
+            const sbSeatIdx = getActiveOffset(gameState.dealerIdx, 1);
+            const bbSeatIdx = getActiveOffset(gameState.dealerIdx, 2);
+            placeBet(sbSeatIdx, gameState.smallBlind);
+            placeBet(bbSeatIdx, gameState.bigBlind);
+            
+            const sbP = gameState.players.find(p => p.id === sbSeatIdx);
+            const bbP = gameState.players.find(p => p.id === bbSeatIdx);
+            if(sbP) addToHistory(`${sbP.name} posts SB $${gameState.smallBlind}`);
+            if(bbP) addToHistory(`${bbP.name} posts BB $${gameState.bigBlind}`);
+
+            for(let j=0; j<2; j++) {
+                for(let i=0; i<CONFIG.numPlayers; i++) {
+                    const idx = (gameState.dealerIdx + 1 + i) % CONFIG.numPlayers;
+                    const p = gameState.players.find(p => p.id === idx);
+                    if(!p || p.isBankrupt) continue;
+                    const card = gameState.deck.pop();
+                    p.hand.push(card);
+                    await dealCardAnim(card, p, idx === gameState.myPlayerIdx);
+                }
+            }
+            
+            // 关键修复：正确设置 UTG 玩家的数组索引
+            const utgSeatIdx = getActiveOffset(gameState.dealerIdx, 3);
+            gameState.activeIdx = gameState.players.findIndex(p => p.id === utgSeatIdx);
+            checkTurn();
+        }
+
+        function showFinalSummary() {
+            const list = document.getElementById('summary-list-content');
+            list.innerHTML = "";
+            [...gameState.players].sort((a, b) => b.chips - a.chips).forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'summary-item';
+                div.innerHTML = `<span style="color:${p.id === gameState.myPlayerIdx ? 'gold' : '#fff'}">${p.name} ${p.isBankrupt ? '(Bankrupt)' : ''}</span> <b>$${p.chips}</b>`;
+                list.appendChild(div);
+            });
+            document.getElementById('summary-modal').style.display = 'block';
+        }
+
+        async function dealCardAnim(card, player, faceUp) {
+            const mesh = createCardMesh(card, faceUp);
+            mesh.position.set(0, 3, 0);
+            cardsGroup.add(mesh);
+            player.meshCards.push(mesh);
+            
+            const fanOffset = (player.hand.length - 1.5) * 0.8; 
+            const yOffset = 0.3 + player.hand.length * 0.05; 
+            
+            // 目标位置：稍微靠近桌子圆心一点点 (相对于 player.pos)
+            const target = player.pos.clone().add(new THREE.Vector3(
+                -Math.sin(player.angle) * 0.8 + Math.cos(player.angle) * fanOffset, 
+                yOffset, 
+                -Math.cos(player.angle) * 0.8 - Math.sin(player.angle) * fanOffset
+            ));
+
+            return new Promise(r => {
+                gsap.to(mesh.position, { x: target.x, y: target.y, z: target.z, duration: 0.6, onComplete: r });
+                // 统一旋转逻辑：
+                // 1. 先绕 Y 旋转到玩家角度，使其“面向”玩家
+                // 2. 绕 X 旋转 0.5，使其顶端（远离玩家一端）翘起，底端（靠近桌边一端）下压
+                gsap.to(mesh.rotation, { 
+                    y: player.angle, 
+                    x: 0.5, 
+                    duration: 0.6 
+                });
+            });
+        }
+
+        function createCardMesh(card, faceUp) {
+            const group = new THREE.Group();
+            // 卡牌主体 - 深色底
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(CONFIG.cardWidth, 0.02, CONFIG.cardHeight), 
+                new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.8, roughness: 0.2 })
+            );
+            group.add(body);
+            group.userData = { card: card };
+
+            if(faceUp) {
+                // 正面：金色粒子镂空感
+                const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=384;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
+                
+                const isRed = (card.s === 'hearts' || card.s === 'diamonds');
+                const particleColor = isRed ? '#ff69b4' : '#4422ff'; // 金粉色 vs 金蓝色
+
+                ctx.fillStyle = '#d4af37'; 
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 100px serif';
+                ctx.fillText(card.r, 128, 150);
+                ctx.font = '80px serif';
+                ctx.fillText({hearts:'♥',diamonds:'♦',clubs:'♣',spades:'♠'}[card.s], 128, 250);
+
+                const imgData = ctx.getImageData(0,0,256,384);
+                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
+                for(let y=0; y<384; y+=4) {
+                    for(let x=0; x<256; x+=4) {
+                        const idx = (y * 256 + x) * 4;
+                        if(imgData.data[idx+1] > 100) { 
+                            ctx.fillStyle = particleColor;
+                            ctx.globalAlpha = 0.5 + Math.random()*0.5;
+                            ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
+                        }
+                    }
+                }
+
+                const label = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+                label.rotation.x = -Math.PI/2; label.position.y = 0.011;
+                group.add(label);
+            } else {
+                // 未知牌：金色柔光粒子感处理的柔和效果
+                const particleCount = 300;
+                const pGeo = new THREE.BufferGeometry();
+                const pPos = new Float32Array(particleCount * 3);
+                for(let i=0; i<particleCount; i++) {
+                    pPos[i*3] = (Math.random()-0.5) * CONFIG.cardWidth;
+                    pPos[i*3+1] = 0.02 + Math.random()*0.05;
+                    pPos[i*3+2] = (Math.random()-0.5) * CONFIG.cardHeight;
+                }
+                pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+                const pMat = new THREE.PointsMaterial({ 
+                    color: 0xd4af37, 
+                    size: 0.03, 
+                    transparent: true, 
+                    opacity: 0.4,
+                    blending: THREE.AdditiveBlending 
+                });
+                const points = new THREE.Points(pGeo, pMat);
+                group.add(points);
+
+                const backCanvas = document.createElement('canvas'); backCanvas.width=128; backCanvas.height=192;
+                const bctx = backCanvas.getContext('2d');
+                bctx.fillStyle = '#050505'; bctx.fillRect(0,0,128,192);
+                bctx.strokeStyle = '#d4af37'; bctx.lineWidth = 1; bctx.strokeRect(10, 10, 108, 172);
+                const back = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(backCanvas) }));
+                back.rotation.x = Math.PI/2; back.position.y = 0.011;
+                group.add(back);
+            }
+            return group;
+        }
+
+        function flipCard(mesh) {
+            const card = mesh.userData.card;
+            while(mesh.children.length > 1) mesh.remove(mesh.children[1]); // 保留body
+            
+            const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=384;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
+            
+            const isRed = (card.s === 'hearts' || card.s === 'diamonds');
+            const particleColor = isRed ? '#ff69b4' : '#4422ff';
+
+            ctx.fillStyle = '#d4af37'; ctx.textAlign = 'center';
+            ctx.font = 'bold 100px serif'; ctx.fillText(card.r, 128, 150);
+            ctx.font = '80px serif'; ctx.fillText({hearts:'♥',diamonds:'♦',clubs:'♣',spades:'♠'}[card.s], 128, 250);
+            
+            const imgData = ctx.getImageData(0,0,256,384);
+            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
+            for(let y=0; y<384; y+=4) {
+                for(let x=0; x<256; x+=4) {
+                    const idx = (y * 256 + x) * 4;
+                    if(imgData.data[idx+1] > 100) {
+                        ctx.fillStyle = particleColor;
+                        ctx.globalAlpha = 0.5 + Math.random()*0.5;
+                        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+            }
+            const label = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+            label.rotation.x = -Math.PI/2; label.position.y = 0.011;
+            mesh.add(label);
+
+            gsap.to(mesh.rotation, { x: 0, duration: 0.5 });
+        }
+
+        function createFoldParticles(player) {
+            player.meshCards.forEach(mesh => {
+                const pos = mesh.position.clone();
+                const rot = mesh.rotation.clone();
+                const pColor = 0xd4af37;
+                
+                // 1. 创建密集的原位粒子群
+                const count = 200;
+                const geo = new THREE.BufferGeometry();
+                const posArr = new Float32Array(count * 3);
+                
+                for(let i=0; i<count; i++) {
+                    // 在卡牌矩形区域内随机分布
+                    const ux = (Math.random()-0.5) * CONFIG.cardWidth;
+                    const uz = (Math.random()-0.5) * CONFIG.cardHeight;
+                    
+                    // 应用卡牌的旋转
+                    const p = new THREE.Vector3(ux, 0, uz).applyEuler(rot);
+                    posArr[i*3] = pos.x + p.x;
+                    posArr[i*3+1] = pos.y + p.y;
+                    posArr[i*3+2] = pos.z + p.z;
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+                
+                const pMaterial = new THREE.PointsMaterial({ 
+                    color: pColor, 
+                    size: 0.03, 
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending 
+                });
+                const points = new THREE.Points(geo, pMaterial);
+                environmentGroup.add(points);
+                
+                // 移除原实体
+                cardsGroup.remove(mesh);
+                
+                // 2. 慢慢变淡的消散动画
+                gsap.to(pMaterial, { 
+                    opacity: 0, 
+                    duration: 2.0, 
+                    ease: "power1.inOut",
+                    onComplete: () => environmentGroup.remove(points) 
+                });
+                // 粒子微弱的向上漂移感
+                gsap.to(points.position, { y: "+=0.3", duration: 2.0, ease: "none" });
+            });
+            player.meshCards = [];
+        }
+
+        function placeBet(seatIdx, amt) {
+            const p = gameState.players.find(p => p.id === seatIdx);
+            if (!p) return;
+            const realAmt = Math.min(amt, p.chips);
+            p.chips -= realAmt;
+            p.currentBet += realAmt;
+            gameState.pot += realAmt;
+            
+            if(p.currentBet > gameState.currentMaxBet) {
+                gameState.currentMaxBet = p.currentBet;
+                // 只要有人加注，除了加注者外，其他人都必须重新表态
+                gameState.numActionThisRound = 0; 
+            }
+            
+            // 简单的筹码实体，用于下注动画
+            const chip = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), 
+                new THREE.MeshStandardMaterial({ color: 0xd4af37, transparent: true, opacity: 0.7 })
+            );
+            chip.position.copy(p.pos);
+            chip.position.y = 0.1;
+            chipsGroup.add(chip);
+            
+            gsap.to(chip.position, { 
+                x: (Math.random() - 0.5) * 2, 
+                y: 0.05, 
+                z: (Math.random() - 0.5) * 2, 
+                duration: 0.6,
+                ease: "power2.out"
+            });
+            updateUI();
+        }
+
+        function checkTurn() {
+            if(gameState.isGameOver) return;
+            // watchdog：如果锁住超过3秒，说明某次AI动作异常/丢失回调，强制解锁继续
+            if(gameState.isProcessing) {
+                if(Date.now() - (gameState.processingSince || 0) > 3000) {
+                    console.warn('[WATCHDOG] Force unlock isProcessing');
+                    dbg('watchdog unlock (checkTurn)');
+                    gameState.isProcessing = false;
+                } else {
+                    return;
+                }
+            }
+            
+            const p = gameState.players[gameState.activeIdx];
+            if (!p) { 
+                console.warn("No player at index", gameState.activeIdx);
+                dbg(`no player at idx=${gameState.activeIdx}`);
+                setTimeout(() => nextStep(), 50); 
+                return; 
+            }
+
+            // 如果当前玩家已弃牌或没钱了，直接跳过到下一个人
+            if(p.isFolded || p.chips <= 0) { 
+                dbg(`skip ${p.name} (folded=${p.isFolded}, chips=${p.chips})`);
+                setTimeout(() => nextStep(), 50); 
+                return; 
+            }
+
+            dbg(`turn ${p.name} idx=${gameState.activeIdx}`);
+            document.getElementById('game-msg').innerText = `${gameState.round}: ${p.name}'s Turn (Idx:${gameState.activeIdx})`;
+            if(p.id === gameState.myPlayerIdx) {
+                toggleButtons(true);
+            } else {
+                toggleButtons(false);
+                gameState.isProcessing = true; // AI动作加锁
+                gameState.processingSince = Date.now();
+                setTimeout(() => {
+                    try {
+                        // AI 决策
+                        const callAmt = gameState.currentMaxBet - p.currentBet;
+                        const rand = Math.random();
+                        if(rand > 0.85 && callAmt > 0) {
+                            p.isFolded = true; 
+                            addToHistory(`${p.name} Folds.`); 
+                            createFoldParticles(p);
+                        } else if (rand > 0.7 && p.chips > (callAmt + gameState.minRaise)) {
+                            // AI 加注
+                            const raiseAmt = gameState.minRaise;
+                            placeBet(p.id, callAmt + raiseAmt);
+                            addToHistory(`${p.name} Raises to ${p.currentBet}.`);
+                        } else {
+                            // AI 跟注或过牌
+                            if (callAmt > 0) {
+                                placeBet(p.id, Math.min(callAmt, p.chips));
+                                if (p.chips === 0) addToHistory(`${p.name} is ALL-IN!`);
+                                else addToHistory(`${p.name} Calls.`);
+                            } else {
+                                addToHistory(`${p.name} Checks.`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[AI ACTION ERROR]', err);
+                        addToHistory(`ERROR: AI action failed (${p.name})`);
+                    } finally {
+                        gameState.isProcessing = false;
+                        gameState.processingSince = 0;
+                        // 无论如何都要继续推进，否则就会卡死在“某某的回合”
+                        try { nextStep(); } catch(e2) { console.error('[NEXTSTEP ERROR]', e2); }
+                    }
+                }, 1000);
+            }
+        }
+
+        function nextStep() {
+            if (gameState.isGameOver) return;
+
+            const activePlayers = gameState.players.filter(p => !p.isFolded);
+            if (activePlayers.length <= 1) {
+                dbg(`nextStep -> winner (activePlayers=${activePlayers.length})`);
+                determineWinner();
+                return;
+            }
+
+            // 1. 本轮动作计数
+            gameState.numActionThisRound++;
+
+            // 2. 判定一轮是否结束
+            const allMatched = gameState.players.every(p => 
+                p.isFolded || p.chips === 0 || p.currentBet === gameState.currentMaxBet
+            );
+            
+            // 判定 Pre-flop 大盲位最后加注权利
+            const bbSeatIdx = getActiveOffset(gameState.dealerIdx, 2);
+            const bbPlayer = gameState.players.find(p => p.id === bbSeatIdx);
+            const isBBTurn = gameState.players[gameState.activeIdx] === bbPlayer;
+            const isPreFlopUnraised = (gameState.round === 'PRE-FLOP' && gameState.currentMaxBet === gameState.bigBlind);
+
+            if (allMatched && gameState.numActionThisRound >= activePlayers.length) {
+                // 特殊：Pre-flop 且还没人加注时，大盲位(BB)拥有最后说话权（仅此一次）
+                if (isPreFlopUnraised && isBBTurn && gameState.numActionThisRound === activePlayers.length) {
+                    dbg('preflop BB option');
+                    checkTurn();
+                    return;
+                }
+                dbg(`advanceRound (round=${gameState.round})`);
+                advanceRound();
+                return;
+            }
+
+            // 3. 寻找下一个需要说话的人
+            let found = false;
+            let checkIdx = gameState.activeIdx;
+            for(let i=0; i<gameState.players.length; i++) {
+                checkIdx = (checkIdx + 1) % gameState.players.length;
+                const nextP = gameState.players[checkIdx];
+                if (!nextP.isFolded && nextP.chips > 0) {
+                    gameState.activeIdx = checkIdx;
+                    found = true;
+                    dbg(`next -> ${nextP.name} idx=${checkIdx}`);
+                    break;
+                }
+            }
+
+            if (!found) {
+                dbg('no next actor -> advanceRound');
+                advanceRound();
+            } else {
+                checkTurn();
+            }
+        }
+
+        async function advanceRound() {
+            gameState.players.forEach(p => p.currentBet = 0);
+            gameState.currentMaxBet = 0;
+            gameState.numActionThisRound = 0;
+            
+            if(gameState.round === 'PRE-FLOP') { gameState.round = 'FLOP'; await dealCommunity(3); }
+            else if(gameState.round === 'FLOP') { gameState.round = 'TURN'; await dealCommunity(1); }
+            else if(gameState.round === 'TURN') { gameState.round = 'RIVER'; await dealCommunity(1); }
+            else { 
+                gameState.round = 'SHOWDOWN';
+                determineWinner();
+                return;
+            }
+            // Round starts with the player after dealer
+            const startSeatIdx = getActiveOffset(gameState.dealerIdx, 1);
+            let startArrIdx = gameState.players.findIndex(p => p.id === startSeatIdx);
+            
+            if (startArrIdx === -1) startArrIdx = 0; // 安全回退
+            gameState.activeIdx = startArrIdx;
+
+            // 如果起始玩家已经弃牌或没钱了，寻找下一个
+            let loops = 0;
+            while((gameState.players[gameState.activeIdx].isFolded || gameState.players[gameState.activeIdx].chips <= 0) && loops < gameState.players.length) {
+                gameState.activeIdx = (gameState.activeIdx + 1) % gameState.players.length;
+                loops++;
+            }
+            checkTurn();
+        }
+
+        async function dealCommunity(n) {
+            for(let i=0; i<n; i++) {
+                const card = gameState.deck.pop();
+                gameState.communityCards.push(card);
+                const mesh = createCardMesh(card, true);
+                mesh.position.set(0, 5, 0);
+                mesh.rotation.y = 0; 
+                cardsGroup.add(mesh);
+                // 社区牌水平平铺在桌子中央，顶端统一朝向 YOU 玩家
+                gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, y: 0.18, z: 0, duration: 0.7 });
+                gsap.to(mesh.rotation, { x: 0, y: 0, duration: 0.7 });
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
+
+        // --- 专业德州扑克判定引擎 ---
+        function getBestHand(sevenCards) {
+            // 安全兜底：如果因为弃牌提前结束，可能会在翻牌前/转牌前就结算，此时牌数 < 5
+            if (!sevenCards || sevenCards.length < 5) {
+                return { rank: 0, value: [], desc: "No Showdown (Fold)" };
+            }
+            const combinations = (arr, k) => {
+                const results = [];
+                const combine = (start, combo) => {
+                    if (combo.length === k) { results.push([...combo]); return; }
+                    for (let i = start; i < arr.length; i++) {
+                        combo.push(arr[i]);
+                        combine(i + 1, combo);
+                        combo.pop();
+                    }
+                };
+                combine(0, []);
+                return results;
+            };
+
+            const combos = combinations(sevenCards, 5);
+            let best = null;
+
+            combos.forEach(combo => {
+                const evalResult = evaluate5(combo);
+                if (!best || compareHands(evalResult, best) > 0) {
+                    best = evalResult;
+                }
+            });
+            return best;
+        }
+
+        function evaluate5(cards) {
+            const sorted = [...cards].sort((a, b) => b.v - a.v);
+            const ranks = sorted.map(c => c.v);
+            const suits = sorted.map(c => c.s);
+            
+            const isFlush = suits.every(s => s === suits[0]);
+            
+            // 顺子判定 (包含 A-2-3-4-5 特殊情况)
+            let isStraight = false;
+            let straightMax = 0;
+            const uniqueRanks = [...new Set(ranks)];
+            if (uniqueRanks.length === 5) {
+                if (ranks[0] - ranks[4] === 4) {
+                    isStraight = true;
+                    straightMax = ranks[0];
+                } else if (ranks[0] === 14 && ranks[1] === 5 && ranks[4] === 2) {
+                    isStraight = true;
+                    straightMax = 5; // A-2-3-4-5 顺子，最大点数为 5
+                }
+            }
+
+            // 频率统计
+            const counts = {};
+            ranks.forEach(r => counts[r] = (counts[r] || 0) + 1);
+            const freq = Object.values(counts).sort((a, b) => b - a);
+            const rankByFreq = Object.keys(counts).map(Number).sort((a, b) => {
+                if (counts[b] !== counts[a]) return counts[b] - counts[a];
+                return b - a;
+            });
+
+            // 判定逻辑
+            if (isFlush && isStraight) {
+                if (straightMax === 14) return { rank: 10, value: [14], desc: "Royal Flush" };
+                return { rank: 9, value: [straightMax], desc: "Straight Flush" };
+            }
+            if (freq[0] === 4) return { rank: 8, value: [rankByFreq[0], rankByFreq[1]], desc: "Four of a Kind" };
+            if (freq[0] === 3 && freq[1] === 2) return { rank: 7, value: [rankByFreq[0], rankByFreq[1]], desc: "Full House" };
+            if (isFlush) return { rank: 6, value: ranks, desc: "Flush" };
+            if (isStraight) return { rank: 5, value: [straightMax], desc: "Straight" };
+            if (freq[0] === 3) return { rank: 4, value: [rankByFreq[0], rankByFreq[1], rankByFreq[2]], desc: "Three of a Kind" };
+            if (freq[0] === 2 && freq[1] === 2) return { rank: 3, value: [rankByFreq[0], rankByFreq[1], rankByFreq[2]], desc: "Two Pair" };
+            if (freq[0] === 2) return { rank: 2, value: [rankByFreq[0], rankByFreq[1], rankByFreq[2], rankByFreq[3]], desc: "One Pair" };
+            return { rank: 1, value: ranks, desc: "High Card" };
+        }
+
+        function compareHands(h1, h2) {
+            // 安全兜底：避免 null/undefined 导致崩溃
+            if (!h1 && !h2) return 0;
+            if (!h1) return -1;
+            if (!h2) return 1;
+            if (h1.rank !== h2.rank) return h1.rank - h2.rank;
+            for (let i = 0; i < h1.value.length; i++) {
+                if (h1.value[i] !== h2.value[i]) return h1.value[i] - h2.value[i];
+            }
+            return 0;
+        }
+
+        function determineWinner() {
+            gameState.isGameOver = true;
+            const activePlayers = gameState.players.filter(p => !p.isFolded);
+
+            // 1) 弃牌提前结束：只剩 1 人，直接胜出，不做 Showdown 评估（避免 <5 张牌时组合评估出错）
+            if (activePlayers.length === 1) {
+                const p = activePlayers[0];
+                addToHistory(`Game Over. ${p.name} wins (all others folded)!`);
+
+                // 将所有筹码移动到赢家位置，且贴近桌面
+                chipsGroup.children.forEach(chip => {
+                    gsap.to(chip.position, { 
+                        x: p.pos.x + (Math.random()-0.5)*0.5, 
+                        z: p.pos.z + (Math.random()-0.5)*0.5, 
+                        y: 0.05, 
+                        duration: 1.2,
+                        ease: "power2.inOut"
+                    });
+                });
+
+                const winAmount = gameState.pot;
+                setTimeout(() => {
+                    p.chips += winAmount;
+                    gameState.pot = 0;
+                    updateUI();
+                    showNextRoundButton();
+                }, 1200);
+                return;
+            }
+            // 极端兜底：如果没人了（理论上不应发生）
+            if (activePlayers.length === 0) {
+                addToHistory(`Game Over. (No active players)`);
+                gameState.pot = 0;
+                updateUI();
+                showNextRoundButton();
+                return;
+            }
+            
+            // 全体亮牌并评估
+            const evaluations = activePlayers.map(p => {
+                p.meshCards.forEach(mesh => flipCard(mesh));
+                return { player: p, result: getBestHand([...p.hand, ...gameState.communityCards]) };
+            });
+
+            // 寻找最强牌型
+            evaluations.sort((a, b) => compareHands(b.result, a.result));
+            const bestResult = evaluations[0]?.result;
+            const winners = bestResult ? evaluations.filter(e => compareHands(e.result, bestResult) === 0) : [evaluations[0]];
+
+            const winnerNames = winners.map(w => w.player.name).join(" & ");
+            addToHistory(`Game Over. ${winnerNames} wins with ${bestResult?.desc || 'Unknown'}!`);
+            
+            // 分池逻辑
+            const winAmount = Math.floor(gameState.pot / winners.length);
+            
+            winners.forEach((w, idx) => {
+                const p = w.player;
+                // 将所有筹码移动到赢家位置，且贴近桌面
+                chipsGroup.children.forEach(chip => {
+                    gsap.to(chip.position, { 
+                        x: p.pos.x + (Math.random()-0.5)*0.5, 
+                        z: p.pos.z + (Math.random()-0.5)*0.5, 
+                        y: 0.05, 
+                        duration: 1.2,
+                        ease: "power2.inOut"
+                    });
+                });
+
+                // 延迟更新UI，等动画结束
+                setTimeout(() => {
+                    if(idx === 0) { // 只在第一个赢家时清空并更新一次UI（简单处理）
+                        p.chips += winAmount;
+                        gameState.pot = 0;
+                        updateUI();
+                        showNextRoundButton();
+                    } else {
+                        p.chips += winAmount;
+                        updateUI();
+                    }
+                }, 1200);
+            });
+        }
+
+        function showNextRoundButton() {
+            document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
+            document.getElementById('btn-next').style.display = 'block';
+        }
+
+        function updateUI() {
+            document.getElementById('pot-amount').innerText = gameState.pot;
+            gameState.players.forEach((p) => {
+                const el = document.getElementById(`chips-${p.id}`);
+                if(el) el.innerText = `$${p.chips}`;
+                updatePlayerStackMesh(p);
+            });
+            document.getElementById('raise-amount-display').innerText = currentRaiseInput;
+        }
+
+        function addToHistory(msg) {
+            const list = document.getElementById('history-list');
+            const div = document.createElement('div');
+            div.innerHTML = `<span style="color:#d4af37;opacity:0.5">></span> ${msg}`;
+            list.prepend(div);
+        }
+
+        function toggleButtons(on) {
+            document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.disabled = !on);
+        }
+
+        function setupEvents() {
+            window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+            
+            // Lobby Interaction
+            document.getElementById('lobby-next-btn').onclick = () => {
+                const user = document.getElementById('username-input').value;
+                const room = document.getElementById('room-id-input').value;
+                const initChips = parseInt(document.getElementById('init-chips-input').value);
+                const totalRounds = parseInt(document.getElementById('total-rounds-input').value);
+
+                if(!user || !room) { alert("Please enter Username and Room ID"); return; }
+                if(initChips < 1000 || initChips % 50 !== 0) { alert("Initial Chips must be >= 1000 and multiple of 50"); return; }
+
+                gameState.initialChips = initChips;
+                gameState.totalRounds = totalRounds;
+
+                if (IS_MULTIPLAYER) {
+                    wireMultiplayer();
+                    socket.emit('join_room', { roomId: room, name: user });
+                    document.getElementById('lobby-overlay').style.display = 'none';
+                    showSeatSelection(); // UI仍显示，但数据来自服务器
+                } else {
+                    document.getElementById('lobby-overlay').style.display = 'none';
+                    showSeatSelection();
+                }
+            };
+
+            function showSeatSelection() {
+                const seatOverlay = document.getElementById('seat-overlay');
+                const seatGrid = document.getElementById('seat-grid');
+                seatGrid.innerHTML = "";
+                seatOverlay.style.display = 'block';
+
+                for(let i=0; i<CONFIG.numPlayers; i++) {
+                    const box = document.createElement('div');
+                    box.className = 'seat-box';
+                    box.id = `seat-box-${i}`;
+                    box.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 10px;">Seat ${i+1}</div>
+                        <div id="seat-status-${i}" style="font-size: 0.8em; margin-bottom: 15px; color: #aaa;">Empty</div>
+                        <div class="seat-actions">
+                            <button class="seat-action-btn" id="join-btn-${i}">Take Seat</button>
+                            <button class="seat-action-btn" id="ai-btn-${i}">Add AI</button>
+                        </div>
+                    `;
+                    seatGrid.appendChild(box);
+
+                    // 选座逻辑
+                    document.getElementById(`join-btn-${i}`).onclick = (e) => {
+                        e.stopPropagation();
+                        if (IS_MULTIPLAYER) {
+                            socket.emit('take_seat', { seatIdx: i });
+                            mySeatIdx = i;
+                            gameState.myPlayerIdx = i;
+                        } else {
+                            // 取消之前的玩家选座
+                            if(gameState.myPlayerIdx !== -1) {
+                                gameState.seatConfig[gameState.myPlayerIdx] = null;
+                            }
+                            gameState.myPlayerIdx = i;
+                            gameState.seatConfig[i] = 'player';
+                            updateSeatUI();
+                        }
+                    };
+
+                    document.getElementById(`ai-btn-${i}`).onclick = (e) => {
+                        e.stopPropagation();
+                        if (IS_MULTIPLAYER) {
+                            // 仅 host 生效，服务端会拒绝非 host
+                            socket.emit('toggle_ai', { seatIdx: i });
+                        } else {
+                            if(gameState.seatConfig[i] === 'player') return; // 不能覆盖玩家
+                            gameState.seatConfig[i] = (gameState.seatConfig[i] === 'ai') ? null : 'ai';
+                            updateSeatUI();
+                        }
+                    };
+                }
+
+                function updateSeatUI() {
+                    for(let i=0; i<CONFIG.numPlayers; i++) {
+                        const statusEl = document.getElementById(`seat-status-${i}`);
+                        const joinBtn = document.getElementById(`join-btn-${i}`);
+                        const aiBtn = document.getElementById(`ai-btn-${i}`);
+                        const box = document.getElementById(`seat-box-${i}`);
+
+                        if(gameState.seatConfig[i] === 'player') {
+                            statusEl.innerText = "YOU";
+                            statusEl.style.color = "gold";
+                            joinBtn.classList.add('active');
+                            aiBtn.style.display = "none";
+                        } else if(gameState.seatConfig[i] === 'ai') {
+                            statusEl.innerText = "AI BOT";
+                            statusEl.style.color = "#00ff00";
+                            joinBtn.style.display = "none";
+                            aiBtn.classList.add('active');
+                            aiBtn.innerText = "Remove AI";
+                        } else {
+                            statusEl.innerText = "Empty";
+                            statusEl.style.color = "#aaa";
+                            joinBtn.style.display = "block";
+                            joinBtn.classList.remove('active');
+                            aiBtn.style.display = "block";
+                            aiBtn.classList.remove('active');
+                            aiBtn.innerText = "Add AI";
+                        }
+                    }
+                }
+                updateSeatUI();
+            }
+
+            document.getElementById('start-game-btn').onclick = () => {
+                if(gameState.myPlayerIdx === -1) {
+                    alert("You must select a seat first!");
+                    return;
+                }
+                const occupiedCount = gameState.seatConfig.filter(s => s !== null).length;
+                if(occupiedCount < 3) {
+                    alert("At least 3 players (including AI) are needed to start!");
+                    return;
+                }
+
+                gsap.to('#seat-overlay', { opacity: 0, duration: 0.5, onComplete: () => {
+                    document.getElementById('seat-overlay').style.display = 'none';
+                    createPlayers();
+                    if (IS_MULTIPLAYER) {
+                        if (!isHost) { alert("Waiting for host to start..."); return; }
+                        socket.emit('start_game', { totalHands: gameState.totalRounds, initialChips: gameState.initialChips });
+                    } else {
+                        startNewHand();
+                    }
+                }});
+            };
+
+            // Rules Modal Events
+            document.getElementById('rules-btn').onclick = () => { document.getElementById('rules-modal').style.display = 'block'; };
+            document.getElementById('close-rules').onclick = () => { document.getElementById('rules-modal').style.display = 'none'; };
+            window.onclick = (event) => { if (event.target == document.getElementById('rules-modal')) document.getElementById('rules-modal').style.display = 'none'; };
+
+            document.getElementById('btn-plus').onclick = () => { currentRaiseInput += gameState.minRaise; updateUI(); };
+            document.getElementById('btn-minus').onclick = () => { if(currentRaiseInput > gameState.minRaise) currentRaiseInput -= gameState.minRaise; updateUI(); };
+            
+            document.getElementById('btn-fold').onclick = () => {
+                toggleButtons(false);
+                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
+                if(!me) return;
+                if (IS_MULTIPLAYER) {
+                    socket.emit('action', { type: 'fold' });
+                } else {
+                    me.isFolded = true;
+                    createFoldParticles(me);
+                    addToHistory("You Folded.");
+                    nextStep();
+                }
+            };
+            document.getElementById('btn-check').onclick = () => {
+                toggleButtons(false);
+                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
+                if(!me) return;
+                if (IS_MULTIPLAYER) {
+                    socket.emit('action', { type: 'call' }); // server decides call vs check
+                } else {
+                    const callAmt = gameState.currentMaxBet - me.currentBet;
+                    if (callAmt > 0) {
+                        placeBet(me.id, callAmt);
+                        addToHistory(`You Called $${callAmt}.`);
+                    } else {
+                        addToHistory("You Checked.");
+                    }
+                    nextStep();
+                }
+            };
+            document.getElementById('btn-raise').onclick = () => {
+                toggleButtons(false);
+                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
+                if(!me) return;
+                if (IS_MULTIPLAYER) {
+                    socket.emit('action', { type: 'raise', raiseBy: currentRaiseInput });
+                } else {
+                    const callAmt = gameState.currentMaxBet - me.currentBet;
+                    const totalRaise = callAmt + currentRaiseInput;
+                    placeBet(me.id, totalRaise);
+                    addToHistory(`You Raised $${currentRaiseInput} (Total $${me.currentBet}).`);
+                    nextStep();
+                }
+            };
+            document.getElementById('btn-allin').onclick = () => {
+                toggleButtons(false);
+                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
+                if(!me) return;
+                if (IS_MULTIPLAYER) {
+                    socket.emit('action', { type: 'allin' });
+                } else {
+                    const allInAmt = me.chips;
+                    placeBet(me.id, allInAmt);
+                    addToHistory("YOU ALL-IN!!!");
+                    nextStep();
+                }
+            };
+            document.getElementById('btn-next').onclick = () => {
+                if (IS_MULTIPLAYER) {
+                    socket.emit('next_hand');
+                } else {
+                    gameState.dealerIdx = (gameState.dealerIdx + 1) % CONFIG.numPlayers;
+                    startNewHand();
+                }
+            };
+        }
+
+        function updateSeatOverlayFromServer(state) {
+            // 同步“Start Game”按钮是否可点
+            const startBtn = document.getElementById('start-game-btn');
+            if (!startBtn) return;
+            startBtn.innerText = state.isHost ? 'Start Game' : 'Waiting for Host';
+            startBtn.disabled = !state.isHost;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            if(starField) {
+                starField.rotation.y += 0.0005;
+                starField.rotation.x += 0.0002;
+            }
+            if(tableParticles) {
+                tableParticles.rotation.y += 0.001;
+            }
+
+            hudData.forEach(hud => {
+                const v = hud.pos.clone().project(camera);
+                hud.el.style.left = `${(v.x * 0.5 + 0.5) * window.innerWidth}px`;
+                hud.el.style.top = `${(-(v.y * 0.5 - 0.5)) * window.innerHeight}px`;
+                hud.el.style.display = v.z < 1 ? 'block' : 'none';
+            });
+            renderer.render(scene, camera);
+        }
+        init();
+    </script>
+</body>
+</html>
