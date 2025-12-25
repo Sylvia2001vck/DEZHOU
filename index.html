@@ -411,7 +411,8 @@
 
             socket.on('private_hand', ({ seatIdx, hand }) => {
                 // 只会发给自己；但可能比 createPlayers 更早到达，先缓存
-                pendingPrivateHands.set(seatIdx, hand || []);
+                const safeHand = Array.isArray(hand) ? hand.slice(0, 2) : [];
+                pendingPrivateHands.set(seatIdx, safeHand);
                 applyPrivateHandIfReady(seatIdx);
             });
 
@@ -444,21 +445,7 @@
                 });
                 updateUI();
 
-                // 同步公共牌：只补差量
-                const target = s.communityCards || [];
-                while(gameState.communityCards.length < target.length) {
-                    const card = target[gameState.communityCards.length];
-                    gameState.communityCards.push(card);
-                    // 直接在桌面渲染一张（不走本地逻辑）
-                    const mesh = createCardMesh(card, true);
-                    mesh.position.set(0, 0.18, 0);
-                    mesh.rotation.set(0,0,0);
-                    cardsGroup.add(mesh);
-                    gsap.fromTo(mesh.position, {y: 5}, {y: 0.18, duration: 0.5});
-                    gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, z: 0, duration: 0.5 });
-                }
-
-                // 新的一手：清理旧桌面（避免越积越多）
+                // 新的一手：先清理旧桌面，再渲染本手的公共牌/手牌占位
                 if (gameState.mpHandNum !== s.handNum) {
                     gameState.mpHandNum = s.handNum;
                     // 清空桌面牌与下注筹码
@@ -471,14 +458,27 @@
                         p.meshCards = [];
                         p.hand = [];
                         p.currentBet = 0;
-                        p.isFolded = false;
                     });
 
-                    // 给其他玩家发两张背面占位牌
-                    dealOpponentPlaceholders();
+                    // 给其他玩家发两张背面占位牌（仅在我已确定座位后）
+                    if (mySeatIdx !== -1) dealOpponentPlaceholders();
 
                     // 如果我的私牌已经缓存到了，现在应用
                     if (mySeatIdx !== -1) applyPrivateHandIfReady(mySeatIdx);
+                }
+
+                // 同步公共牌：只补差量（最多 5 张）
+                const target = Array.isArray(s.communityCards) ? s.communityCards.slice(0, 5) : [];
+                while(gameState.communityCards.length < target.length) {
+                    const card = target[gameState.communityCards.length];
+                    gameState.communityCards.push(card);
+                    // 直接在桌面渲染一张（不走本地逻辑）
+                    const mesh = createCardMesh(card, true);
+                    mesh.position.set(0, 0.18, 0);
+                    mesh.rotation.set(0,0,0);
+                    cardsGroup.add(mesh);
+                    gsap.fromTo(mesh.position, {y: 5}, {y: 0.18, duration: 0.5});
+                    gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, z: 0, duration: 0.5 });
                 }
             });
 
@@ -520,8 +520,9 @@
             me.hand = [];
 
             // 顺序发两张正面牌（确保 hand.length 用于扇形偏移）
+            const safeHand = Array.isArray(hand) ? hand.slice(0, 2) : [];
             (async () => {
-                for (const card of hand) {
+                for (const card of safeHand) {
                     me.hand.push(card);
                     // eslint-disable-next-line no-await-in-loop
                     await dealCardAnim(card, me, true);
@@ -533,7 +534,10 @@
             const dummy = { s: 'spades', r: 'A', v: 12 };
             gameState.players.forEach((p) => {
                 if (p.id === mySeatIdx) return;
-                // 两张背面牌
+                // 确保每个对手只有两张背面占位牌
+                p.hand = [];
+                (p.meshCards || []).forEach(m => cardsGroup.remove(m));
+                p.meshCards = [];
                 for (let k = 0; k < 2; k++) {
                     p.hand.push(dummy);
                     dealCardAnim(dummy, p, false);
