@@ -347,7 +347,10 @@
             if(!IS_MULTIPLAYER) return;
 
             socket.on('room_state', (state) => {
-                isHost = !!state.isHost;
+                // 服务器广播时 isHost 可能为 null；这里用 hostSocketId vs 当前 socket.id 自行计算
+                isHost = (state.isHost !== null && state.isHost !== undefined)
+                    ? !!state.isHost
+                    : (!!state.hostSocketId && !!socket?.id && state.hostSocketId === socket.id);
                 // 同步 seats 到本地 seatConfig：player/ai/null
                 gameState.seatConfig = Array(CONFIG.numPlayers).fill(null);
                 (state.seats || []).forEach(s => {
@@ -1551,6 +1554,44 @@
             if (!startBtn) return;
             startBtn.innerText = state.isHost ? 'Start Game' : 'Waiting for Host';
             startBtn.disabled = !state.isHost;
+
+            // 同步每个座位的显示（Empty / YOU / AI BOT / PlayerName）
+            for (let i = 0; i < CONFIG.numPlayers; i++) {
+                const statusEl = document.getElementById(`seat-status-${i}`);
+                const joinBtn = document.getElementById(`join-btn-${i}`);
+                const aiBtn = document.getElementById(`ai-btn-${i}`);
+                if (!statusEl || !joinBtn || !aiBtn) continue;
+
+                const s = state.seats?.[i] || null;
+                if (!s) {
+                    statusEl.innerText = "Empty";
+                    statusEl.style.color = "#aaa";
+                    joinBtn.style.display = "block";
+                    joinBtn.classList.remove('active');
+                    aiBtn.style.display = isHost ? "block" : "none";
+                    aiBtn.classList.remove('active');
+                    aiBtn.innerText = "Add AI";
+                    continue;
+                }
+
+                if (s.type === 'ai') {
+                    statusEl.innerText = s.name || "AI BOT";
+                    statusEl.style.color = "#00ff00";
+                    joinBtn.style.display = "none";
+                    aiBtn.style.display = isHost ? "block" : "none";
+                    aiBtn.classList.add('active');
+                    aiBtn.innerText = "Remove AI";
+                    continue;
+                }
+
+                // player
+                const isMe = (mySeatIdx === i);
+                statusEl.innerText = isMe ? "YOU" : (s.name || "PLAYER");
+                statusEl.style.color = isMe ? "gold" : "#fff";
+                joinBtn.style.display = isMe ? "block" : "none";
+                joinBtn.classList.toggle('active', isMe);
+                aiBtn.style.display = "none";
+            }
         }
 
         function animate() {
