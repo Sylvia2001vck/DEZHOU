@@ -483,10 +483,20 @@ function proceedToNextStreet(room) {
 }
 
 function finishHand(room) {
+  // stop any pending AI timers
+  clearTimeout(room.aiTimer);
+  room.aiTimer = null;
+
+  // freeze betting loop
+  room.pendingActionSeats = new Set();
+  room.activeSeatIdx = null;
+
   const inHand = getInHandSeats(room);
   if (inHand.length === 0) {
     broadcastActivity(room, "Hand ended (no active players).");
     room.pot = 0;
+    room.round = "HAND_OVER";
+    io.to(room.roomId).emit("hand_over", { handNum: room.handNum, totalHands: room.totalHands, winners: [], desc: "No active players" });
     broadcastGame(room);
     return;
   }
@@ -494,8 +504,11 @@ function finishHand(room) {
     const winnerSeat = inHand[0];
     const wp = getPlayer(room, winnerSeat);
     wp.chips += room.pot;
-    broadcastActivity(room, `Game Over. ${room.seats[winnerSeat].name} wins (all others folded)!`);
+    const winnerName = room.seats[winnerSeat].name;
+    broadcastActivity(room, `Game Over. ${winnerName} wins (all others folded)!`);
     room.pot = 0;
+    room.round = "HAND_OVER";
+    io.to(room.roomId).emit("hand_over", { handNum: room.handNum, totalHands: room.totalHands, winners: [{ seatIdx: winnerSeat, name: winnerName }], desc: "All others folded" });
     broadcastGame(room);
     return;
   }
@@ -517,6 +530,13 @@ function finishHand(room) {
   }
   broadcastActivity(room, `Game Over. ${winners.map((w) => room.seats[w.seatIdx].name).join(" & ")} wins with ${best.desc}!`);
   room.pot = 0;
+  room.round = "HAND_OVER";
+  io.to(room.roomId).emit("hand_over", {
+    handNum: room.handNum,
+    totalHands: room.totalHands,
+    winners: winners.map((w) => ({ seatIdx: w.seatIdx, name: room.seats[w.seatIdx].name })),
+    desc: best.desc
+  });
   broadcastGame(room);
 }
 

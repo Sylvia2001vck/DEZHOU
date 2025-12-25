@@ -257,6 +257,7 @@
         let isHost = false;
         let lastRoomState = null;
         const pendingPrivateHands = new Map(); // seatIdx -> hand
+        const privateHandRenderToken = new Map(); // seatIdx -> number (cancel in-flight renders)
         let lastActionSeatIdx = null;
 
         function dbg(msg) {
@@ -409,6 +410,18 @@
                 showPlayerActionBadge(seatIdx, text);
             });
 
+            socket.on('hand_over', ({ handNum, totalHands, winners, desc }) => {
+                // show a next-hand prompt
+                const winNames = (winners || []).map(w => w.name).join(' & ');
+                addToHistory(`--- HAND OVER ${handNum}/${totalHands}: ${winNames || 'N/A'} (${desc || ''}) ---`);
+
+                const btn = document.getElementById('btn-next');
+                document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
+                btn.style.display = 'block';
+                btn.innerText = isHost ? 'Next Hand' : 'Waiting for Host';
+                btn.disabled = !isHost;
+            });
+
             socket.on('private_hand', ({ seatIdx, hand }) => {
                 // 只会发给自己；但可能比 createPlayers 更早到达，先缓存
                 const safeHand = Array.isArray(hand) ? hand.slice(0, 2) : [];
@@ -434,6 +447,12 @@
                     if (currentRaiseInput < gameState.minRaise) currentRaiseInput = gameState.minRaise;
                 }
                 document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
+                // 不依赖 turn 事件：直接用 game_state 的 activeSeatIdx 来开关按钮
+                if (s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) {
+                    toggleButtons(s.activeSeatIdx === mySeatIdx);
+                } else {
+                    toggleButtons(false);
+                }
                 // 同步玩家筹码/弃牌
                 (s.players || []).forEach(sp => {
                     const p = gameState.players.find(pp => pp.id === sp.seatIdx);
@@ -514,6 +533,10 @@
             const me = gameState.players.find(p => p.id === seatIdx);
             if(!me) return;
 
+            // cancel any in-flight render for this seat
+            const token = (privateHandRenderToken.get(seatIdx) || 0) + 1;
+            privateHandRenderToken.set(seatIdx, token);
+
             // 清掉背面占位牌
             (me.meshCards || []).forEach(m => cardsGroup.remove(m));
             me.meshCards = [];
@@ -523,6 +546,8 @@
             const safeHand = Array.isArray(hand) ? hand.slice(0, 2) : [];
             (async () => {
                 for (const card of safeHand) {
+                    // if a newer render started, stop this one
+                    if (privateHandRenderToken.get(seatIdx) !== token) return;
                     me.hand.push(card);
                     // eslint-disable-next-line no-await-in-loop
                     await dealCardAnim(card, me, true);
@@ -531,7 +556,6 @@
         }
 
         function dealOpponentPlaceholders() {
-            const dummy = { s: 'spades', r: 'A', v: 12 };
             gameState.players.forEach((p) => {
                 if (p.id === mySeatIdx) return;
                 // 确保每个对手只有两张背面占位牌
@@ -539,6 +563,7 @@
                 (p.meshCards || []).forEach(m => cardsGroup.remove(m));
                 p.meshCards = [];
                 for (let k = 0; k < 2; k++) {
+                    const dummy = { s: 'spades', r: 'A', v: 12 }; // 每张都用独立对象，避免引用复用带来渲染/flip 异常
                     p.hand.push(dummy);
                     dealCardAnim(dummy, p, false);
                 }
