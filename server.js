@@ -721,6 +721,31 @@ io.on("connection", (socket) => {
     broadcastGame(room);
   });
 
+  socket.on("kick_seat", ({ seatIdx }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room) return;
+    if (socket.id !== room.hostSocketId) return;
+    if (room.started) return; // 只允许在等待/选座阶段踢人
+
+    const idx = Number(seatIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
+    const seat = room.seats[idx];
+    if (!seat || seat.type !== "player") return;
+
+    // 通知被踢的人（如果还在线）
+    if (seat.socketId && io.sockets.sockets.has(seat.socketId)) {
+      io.to(seat.socketId).emit("kicked", { seatIdx: idx });
+    }
+
+    room.seats[idx] = null;
+    room.players.delete(idx);
+
+    broadcastRoom(room);
+    broadcastGame(room);
+  });
+
   socket.on("start_game", ({ totalHands, initialChips }) => {
     const rid = socket.data.roomId;
     if (!rid) return;

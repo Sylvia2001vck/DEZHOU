@@ -37,7 +37,8 @@
         /* Rules Modal */
         #rules-btn { position: absolute; top: 20px; left: 20px; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: #ffd700; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
         #rules-btn:hover { background: rgba(212, 175, 55, 0.4); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
-        #rules-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 5, 2, 0.95); border: 1px solid #ffd700; padding: 30px; border-radius: 15px; z-index: 100; width: 400px; max-height: 80vh; overflow-y: auto; backdrop-filter: blur(20px); color: #fff; box-shadow: 0 0 50px rgba(212, 175, 55, 0.2); }
+        /* Rules panel: docked on the left, does not cover the table center */
+        #rules-modal { display: none; position: fixed; top: 80px; left: 20px; transform: none; background: rgba(10, 5, 2, 0.75); border: 1px solid rgba(255, 215, 0, 0.55); padding: 18px 18px 12px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 140px); overflow-y: auto; backdrop-filter: blur(14px); color: #fff; box-shadow: 0 0 35px rgba(212, 175, 55, 0.18); }
         #rules-modal h2 { color: #ffd700; margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px; }
         #rules-modal ul { list-style: none; padding: 0; }
         #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
@@ -362,6 +363,16 @@
 
             socket.on('activity', (msg) => addToHistory(msg));
             socket.on('error_msg', ({msg}) => alert(msg));
+            socket.on('kicked', ({ seatIdx }) => {
+                addToHistory(`You were removed from Seat ${Number(seatIdx) + 1} by host.`);
+                if (mySeatIdx === seatIdx) {
+                    mySeatIdx = -1;
+                    gameState.myPlayerIdx = -1;
+                }
+                // 让 UI 立刻回到可选座状态（server 会随后广播 room_state）
+                document.getElementById('seat-overlay').style.display = 'block';
+                document.getElementById('seat-overlay').style.opacity = '1';
+            });
 
             socket.on('private_hand', ({ seatIdx, hand }) => {
                 // 只会发给自己
@@ -1386,6 +1397,7 @@
                         <div class="seat-actions">
                             <button class="seat-action-btn" id="join-btn-${i}">Take Seat</button>
                             <button class="seat-action-btn" id="ai-btn-${i}">Add AI</button>
+                            <button class="seat-action-btn" id="kick-btn-${i}" style="display:none;">Remove</button>
                         </div>
                     `;
                     seatGrid.appendChild(box);
@@ -1418,6 +1430,13 @@
                             gameState.seatConfig[i] = (gameState.seatConfig[i] === 'ai') ? null : 'ai';
                             updateSeatUI();
                         }
+                    };
+
+                    // host remove player (multiplayer only)
+                    document.getElementById(`kick-btn-${i}`).onclick = (e) => {
+                        e.stopPropagation();
+                        if (!IS_MULTIPLAYER) return;
+                        socket.emit('kick_seat', { seatIdx: i });
                     };
                 }
 
@@ -1555,8 +1574,8 @@
             // 同步“Start Game”按钮是否可点
             const startBtn = document.getElementById('start-game-btn');
             if (!startBtn) return;
-            startBtn.innerText = state.isHost ? 'Start Game' : 'Waiting for Host';
-            startBtn.disabled = !state.isHost;
+            startBtn.innerText = isHost ? 'Start Game' : 'Waiting for Host';
+            startBtn.disabled = !isHost;
 
             // 同步每个座位的显示（Empty / YOU / AI BOT / PlayerName）
             for (let i = 0; i < CONFIG.numPlayers; i++) {
@@ -1564,6 +1583,7 @@
                 const joinBtn = document.getElementById(`join-btn-${i}`);
                 const aiBtn = document.getElementById(`ai-btn-${i}`);
                 const hostEl = document.getElementById(`seat-host-${i}`);
+                const kickBtn = document.getElementById(`kick-btn-${i}`);
                 if (!statusEl || !joinBtn || !aiBtn) continue;
 
                 if (hostEl) {
@@ -1579,6 +1599,7 @@
                     aiBtn.style.display = isHost ? "block" : "none";
                     aiBtn.classList.remove('active');
                     aiBtn.innerText = "Add AI";
+                    if (kickBtn) kickBtn.style.display = "none";
                     continue;
                 }
 
@@ -1589,16 +1610,27 @@
                     aiBtn.style.display = isHost ? "block" : "none";
                     aiBtn.classList.add('active');
                     aiBtn.innerText = "Remove AI";
+                    if (kickBtn) kickBtn.style.display = "none";
                     continue;
                 }
 
                 // player
                 const isMe = (mySeatIdx === i);
                 statusEl.innerText = isMe ? "YOU" : (s.name || "PLAYER");
-                statusEl.style.color = isMe ? "gold" : "#fff";
+                // 统一为白色
+                statusEl.style.color = "#fff";
                 joinBtn.style.display = isMe ? "block" : "none";
                 joinBtn.classList.toggle('active', isMe);
                 aiBtn.style.display = "none";
+
+                // Host-only kick button for players (not for self)
+                if (kickBtn) {
+                    if (isHost && !isMe) {
+                        kickBtn.style.display = "block";
+                    } else {
+                        kickBtn.style.display = "none";
+                    }
+                }
             }
         }
 
