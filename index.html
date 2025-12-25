@@ -254,6 +254,7 @@
         const socket = IS_MULTIPLAYER ? window.io() : null;
         let mySeatIdx = -1;
         let isHost = false;
+        let lastRoomState = null;
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
@@ -272,8 +273,11 @@
             initialChips: 1000,
             myPlayerIdx: -1,
             seatConfig: Array(10).fill(null), // null: Empty, 'player': YOU, 'ai': AI
+            seatMeta: {}, // seatIdx -> { type, name } (multiplayer)
             isProcessing: false, // 动作锁，防止快速重复触发
-            processingSince: 0  // 记录动作锁开始时间，用于watchdog兜底
+            processingSince: 0,  // 记录动作锁开始时间，用于watchdog兜底
+            mpInitialized: false,
+            mpHandNum: 0
         };
 
         // 返回从 startSeatIdx 开始，向前数 offset 个“有效玩家座位”的 seatIdx（用于 SB/BB/UTG 等）
@@ -348,10 +352,18 @@
             if(!IS_MULTIPLAYER) return;
 
             socket.on('room_state', (state) => {
+                lastRoomState = state;
                 // 服务器广播时 isHost 可能为 null；这里用 hostSocketId vs 当前 socket.id 自行计算
                 isHost = (state.isHost !== null && state.isHost !== undefined)
                     ? !!state.isHost
                     : (!!state.hostSocketId && !!socket?.id && state.hostSocketId === socket.id);
+
+                // seat meta (names/types) from server
+                gameState.seatMeta = {};
+                (state.seats || []).forEach(s => {
+                    if(!s) return;
+                    gameState.seatMeta[s.seatIdx] = { type: s.type, name: s.name };
+                });
                 // 同步 seats 到本地 seatConfig：player/ai/null
                 gameState.seatConfig = Array(CONFIG.numPlayers).fill(null);
                 (state.seats || []).forEach(s => {
@@ -359,6 +371,11 @@
                     gameState.seatConfig[s.seatIdx] = (s.type === 'ai') ? 'ai' : 'player';
                 });
                 updateSeatOverlayFromServer(state);
+
+                // 关键修复：只要服务器说 started=true，所有客户端都要进入牌桌（不只是 host）
+                if (state.started) {
+                    enterMultiplayerGame();
+                }
             });
 
             socket.on('activity', (msg) => addToHistory(msg));
@@ -389,6 +406,10 @@
             });
 
             socket.on('game_state', (s) => {
+                // 服务器开启后，确保所有人都进入牌桌
+                if (s.started) {
+                    enterMultiplayerGame();
+                }
                 // 只做 UI/渲染同步（逻辑以服务端为准）
                 gameState.round = s.round;
                 gameState.pot = s.pot;
@@ -418,12 +439,46 @@
                     gsap.fromTo(mesh.position, {y: 5}, {y: 0.18, duration: 0.5});
                     gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, z: 0, duration: 0.5 });
                 }
+
+                // 新的一手：清理旧桌面（避免越积越多）
+                if (gameState.mpHandNum !== s.handNum) {
+                    gameState.mpHandNum = s.handNum;
+                    // 清空桌面牌与下注筹码
+                    while(cardsGroup.children.length > 0) cardsGroup.remove(cardsGroup.children[0]);
+                    while(chipsGroup.children.length > 0) chipsGroup.remove(chipsGroup.children[0]);
+                    gameState.communityCards = [];
+                    // 清掉每位玩家手牌 mesh（自己的牌会通过 private_hand 重发）
+                    gameState.players.forEach(p => {
+                        (p.meshCards || []).forEach(m => cardsGroup.remove(m));
+                        p.meshCards = [];
+                        p.hand = [];
+                        p.currentBet = 0;
+                        p.isFolded = false;
+                    });
+                }
             });
 
             socket.on('turn', ({ activeSeatIdx }) => {
                 // 轮到我则开按钮，否则关
                 toggleButtons(activeSeatIdx === mySeatIdx);
             });
+        }
+
+        function enterMultiplayerGame() {
+            // 只初始化一次
+            if (gameState.mpInitialized) {
+                // 隐藏选座层，避免挡住牌桌
+                const seatOverlay = document.getElementById('seat-overlay');
+                if (seatOverlay) seatOverlay.style.display = 'none';
+                return;
+            }
+            // 进入牌桌：隐藏选座层 + 创建玩家
+            const seatOverlay = document.getElementById('seat-overlay');
+            if (seatOverlay) seatOverlay.style.display = 'none';
+
+            // 如果还没创建过玩家，先创建
+            createPlayers();
+            gameState.mpInitialized = true;
         }
 
         function setupBase() {
@@ -562,7 +617,10 @@
             const occupied = [];
             for (let i = 0; i < CONFIG.numPlayers; i++) {
                 if (gameState.seatConfig[i]) {
-                    occupied.push({ seatIdx: i, type: gameState.seatConfig[i] });
+                    const meta = gameState.seatMeta?.[i];
+                    const type = gameState.seatConfig[i];
+                    const name = meta?.name || (type === 'ai' ? `AI-${i}` : `Player-${i}`);
+                    occupied.push({ seatIdx: i, type, name });
                 }
             }
 
@@ -570,7 +628,8 @@
             if (totalActive === 0) return;
 
             // 2. 找到“我”在被占用座位中的顺序索引
-            const myOrderIdx = occupied.findIndex(s => s.seatIdx === gameState.myPlayerIdx);
+            let myOrderIdx = occupied.findIndex(s => s.seatIdx === gameState.myPlayerIdx);
+            if (myOrderIdx < 0) myOrderIdx = 0;
 
             // 3. 根据活跃人数均匀分配角度，并以“我”为中心
             occupied.forEach((seat, orderIdx) => {
@@ -583,7 +642,8 @@
                 stackGroup.position.add(new THREE.Vector3(Math.sin(visualAngle)*0.8, 0, Math.cos(visualAngle)*0.8));
                 playerStacksGroup.add(stackGroup);
 
-                let pName = seat.type === 'player' ? (document.getElementById('username-input').value || "YOU") : `AI-${seat.seatIdx}`;
+                let pName = seat.name || (seat.type === 'ai' ? `AI-${seat.seatIdx}` : `Player-${seat.seatIdx}`);
+                if (seat.type === 'player' && seat.seatIdx === gameState.myPlayerIdx) pName = "YOU";
                 let pChips = gameState.initialChips;
 
                 const playerObj = { 
