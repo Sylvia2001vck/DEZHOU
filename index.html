@@ -259,6 +259,7 @@
         const pendingPrivateHands = new Map(); // seatIdx -> hand
         const privateHandRenderToken = new Map(); // seatIdx -> number (cancel in-flight renders)
         let lastActionSeatIdx = null;
+        let lastHandOverNum = null;
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
@@ -408,6 +409,14 @@
 
             socket.on('player_action', ({ seatIdx, text }) => {
                 showPlayerActionBadge(seatIdx, text);
+                // Multiplayer fold effect: disintegrate the folded player's cards
+                if (String(text || '').toUpperCase().startsWith('FOLD')) {
+                    const p = gameState.players.find(pp => pp.id === seatIdx);
+                    if (p && !p._foldFxPlayed && (p.meshCards?.length || 0) > 0) {
+                        p._foldFxPlayed = true;
+                        createFoldParticles(p);
+                    }
+                }
             });
 
             socket.on('hand_over', ({ handNum, totalHands, winners, desc }) => {
@@ -418,8 +427,9 @@
                 const btn = document.getElementById('btn-next');
                 document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
                 btn.style.display = 'block';
-                btn.innerText = isHost ? 'Next Hand' : 'Waiting for Host';
+                btn.innerText = isHost ? 'Next Round' : 'Waiting for Host';
                 btn.disabled = !isHost;
+                lastHandOverNum = handNum;
             });
 
             socket.on('private_hand', ({ seatIdx, hand }) => {
@@ -447,11 +457,22 @@
                     if (currentRaiseInput < gameState.minRaise) currentRaiseInput = gameState.minRaise;
                 }
                 document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
-                // 不依赖 turn 事件：直接用 game_state 的 activeSeatIdx 来开关按钮
-                if (s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) {
-                    toggleButtons(s.activeSeatIdx === mySeatIdx);
-                } else {
+                // 控制区显示逻辑（联机）：HAND_OVER 才显示 Next Round；否则显示常规按钮并根据 activeSeatIdx 开关
+                const btnNext = document.getElementById('btn-next');
+                if (s.round === 'HAND_OVER') {
+                    document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
+                    btnNext.style.display = 'block';
+                    btnNext.innerText = isHost ? 'Next Round' : 'Waiting for Host';
+                    btnNext.disabled = !isHost;
                     toggleButtons(false);
+                } else {
+                    btnNext.style.display = 'none';
+                    document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'block');
+                    if (s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) {
+                        toggleButtons(s.activeSeatIdx === mySeatIdx);
+                    } else {
+                        toggleButtons(false);
+                    }
                 }
                 // 同步玩家筹码/弃牌
                 (s.players || []).forEach(sp => {
@@ -467,6 +488,7 @@
                 // 新的一手：先清理旧桌面，再渲染本手的公共牌/手牌占位
                 if (gameState.mpHandNum !== s.handNum) {
                     gameState.mpHandNum = s.handNum;
+                    lastHandOverNum = null;
                     // 清空桌面牌与下注筹码
                     while(cardsGroup.children.length > 0) cardsGroup.remove(cardsGroup.children[0]);
                     while(chipsGroup.children.length > 0) chipsGroup.remove(chipsGroup.children[0]);
@@ -477,6 +499,7 @@
                         p.meshCards = [];
                         p.hand = [];
                         p.currentBet = 0;
+                        p._foldFxPlayed = false;
                     });
 
                     // 给其他玩家发两张背面占位牌（仅在我已确定座位后）
@@ -551,23 +574,32 @@
                     me.hand.push(card);
                     // eslint-disable-next-line no-await-in-loop
                     await dealCardAnim(card, me, true);
+                    // slow down slightly for premium feel (multiplayer)
+                    if (IS_MULTIPLAYER) await new Promise(r => setTimeout(r, 140));
                 }
             })();
         }
 
-        function dealOpponentPlaceholders() {
+        async function dealOpponentPlaceholders() {
             gameState.players.forEach((p) => {
                 if (p.id === mySeatIdx) return;
                 // 确保每个对手只有两张背面占位牌
                 p.hand = [];
                 (p.meshCards || []).forEach(m => cardsGroup.remove(m));
                 p.meshCards = [];
-                for (let k = 0; k < 2; k++) {
-                    const dummy = { s: 'spades', r: 'A', v: 12 }; // 每张都用独立对象，避免引用复用带来渲染/flip 异常
-                    p.hand.push(dummy);
-                    dealCardAnim(dummy, p, false);
-                }
             });
+            // 顺序发牌（避免“一瞬间全发完”的感觉）
+            for (const p of gameState.players) {
+                if (p.id === mySeatIdx) continue;
+                for (let k = 0; k < 2; k++) {
+                    const dummy = { s: 'spades', r: 'A', v: 12 }; // 每张都用独立对象
+                    p.hand.push(dummy);
+                    // eslint-disable-next-line no-await-in-loop
+                    await dealCardAnim(dummy, p, false);
+                    // eslint-disable-next-line no-await-in-loop
+                    if (IS_MULTIPLAYER) await new Promise(r => setTimeout(r, 120));
+                }
+            }
         }
 
         function showPlayerActionBadge(seatIdx, text) {
