@@ -168,6 +168,10 @@ function broadcastActivity(room, msg) {
   io.to(room.roomId).emit("activity", msg);
 }
 
+function broadcastPlayerAction(room, seatIdx, text) {
+  io.to(room.roomId).emit("player_action", { seatIdx, text });
+}
+
 function broadcastGame(room) {
   const state = getPublicGameState(room);
   io.to(room.roomId).emit("game_state", state);
@@ -581,17 +585,21 @@ function handleAction(room, seatIdx, action) {
   if (actType === "fold") {
     p.isFolded = true;
     broadcastActivity(room, `${room.seats[seatIdx].name} Folds.`);
+    broadcastPlayerAction(room, seatIdx, "FOLD");
     room.pendingActionSeats.delete(seatIdx);
   } else if (actType === "check") {
     if (callAmt !== 0) return;
     broadcastActivity(room, `${room.seats[seatIdx].name} Checks.`);
+    broadcastPlayerAction(room, seatIdx, "CHECK");
     room.pendingActionSeats.delete(seatIdx);
   } else if (actType === "call") {
     if (callAmt > 0) {
       placeBet(room, seatIdx, callAmt);
       broadcastActivity(room, `${room.seats[seatIdx].name} Calls.`);
+      broadcastPlayerAction(room, seatIdx, `CALL ${callAmt}`);
     } else {
       broadcastActivity(room, `${room.seats[seatIdx].name} Checks.`);
+      broadcastPlayerAction(room, seatIdx, "CHECK");
     }
     room.pendingActionSeats.delete(seatIdx);
   } else if (actType === "raise") {
@@ -604,6 +612,7 @@ function handleAction(room, seatIdx, action) {
     room.pendingActionSeats = new Set(actable);
     room.pendingActionSeats.delete(seatIdx);
     broadcastActivity(room, `${room.seats[seatIdx].name} Raises to ${p.currentBet}.`);
+    broadcastPlayerAction(room, seatIdx, `RAISE ${p.currentBet}`);
   } else if (actType === "allin") {
     const all = p.chips;
     if (all <= 0) {
@@ -616,8 +625,10 @@ function handleAction(room, seatIdx, action) {
         room.pendingActionSeats = new Set(actable);
         room.pendingActionSeats.delete(seatIdx);
         broadcastActivity(room, `${room.seats[seatIdx].name} ALL-IN to ${p.currentBet}.`);
+        broadcastPlayerAction(room, seatIdx, `ALL-IN ${p.currentBet}`);
       } else {
         broadcastActivity(room, `${room.seats[seatIdx].name} is ALL-IN!`);
+        broadcastPlayerAction(room, seatIdx, "ALL-IN");
         room.pendingActionSeats.delete(seatIdx);
       }
     }
@@ -712,6 +723,7 @@ io.on("connection", (socket) => {
 
     room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player" };
     socket.data.seatIdx = idx;
+    socket.emit("seat_taken", { seatIdx: idx });
     ensurePlayersMap(room);
     broadcastRoom(room);
     broadcastGame(room);

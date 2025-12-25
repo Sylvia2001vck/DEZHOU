@@ -71,7 +71,7 @@
         
         .player-hud { position: absolute; pointer-events: none; transform: translate(-50%, -100%); text-align: center; }
         .chip-display { color: #ffd1b3; font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(255, 140, 50, 0.4); }
-        #game-msg { font-size: 1.3em; color: #ffd1b3; text-align: center; letter-spacing: 4px; }
+        #game-msg { font-size: 1.1em; color: #ffd1b3; text-align: left; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -186,7 +186,7 @@
     </div>
 
     <div id="ui-overlay">
-        <div class="panel" style="width: 240px; margin-left: 150px;">
+        <div class="panel" style="width: 260px; margin-left: 0;">
             <div id="game-msg">WAITING</div>
             <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
             <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
@@ -256,6 +256,8 @@
         let mySeatIdx = -1;
         let isHost = false;
         let lastRoomState = null;
+        const pendingPrivateHands = new Map(); // seatIdx -> hand
+        let lastActionSeatIdx = null;
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
@@ -352,6 +354,11 @@
         function wireMultiplayer() {
             if(!IS_MULTIPLAYER) return;
 
+            socket.on('seat_taken', ({ seatIdx }) => {
+                mySeatIdx = seatIdx;
+                gameState.myPlayerIdx = seatIdx;
+            });
+
             socket.on('room_state', (state) => {
                 lastRoomState = state;
                 // 服务器广播时 isHost 可能为 null；这里用 hostSocketId vs 当前 socket.id 自行计算
@@ -398,18 +405,14 @@
                 document.getElementById('seat-overlay').style.opacity = '1';
             });
 
+            socket.on('player_action', ({ seatIdx, text }) => {
+                showPlayerActionBadge(seatIdx, text);
+            });
+
             socket.on('private_hand', ({ seatIdx, hand }) => {
-                // 只会发给自己
-                const me = gameState.players.find(p => p.id === seatIdx);
-                if(!me) return;
-                me.hand = hand;
-                // 重渲染自己的两张牌（简单处理：清空再发）
-                me.meshCards.forEach(m => cardsGroup.remove(m));
-                me.meshCards = [];
-                // 发两张牌到自己位置
-                (hand || []).forEach(async (card) => {
-                    await dealCardAnim(card, me, true);
-                });
+                // 只会发给自己；但可能比 createPlayers 更早到达，先缓存
+                pendingPrivateHands.set(seatIdx, hand || []);
+                applyPrivateHandIfReady(seatIdx);
             });
 
             socket.on('game_state', (s) => {
@@ -425,6 +428,10 @@
                 gameState.round = s.round;
                 gameState.pot = s.pot;
                 gameState.currentMaxBet = s.currentMaxBet;
+                if (Number.isFinite(s.minRaise)) {
+                    gameState.minRaise = s.minRaise;
+                    if (currentRaiseInput < gameState.minRaise) currentRaiseInput = gameState.minRaise;
+                }
                 document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
                 // 同步玩家筹码/弃牌
                 (s.players || []).forEach(sp => {
@@ -466,6 +473,12 @@
                         p.currentBet = 0;
                         p.isFolded = false;
                     });
+
+                    // 给其他玩家发两张背面占位牌
+                    dealOpponentPlaceholders();
+
+                    // 如果我的私牌已经缓存到了，现在应用
+                    if (mySeatIdx !== -1) applyPrivateHandIfReady(mySeatIdx);
                 }
             });
 
@@ -490,6 +503,55 @@
             // 如果还没创建过玩家，先创建
             createPlayers();
             gameState.mpInitialized = true;
+
+            // 进入后如果我的私牌已缓存，立刻渲染
+            if (mySeatIdx !== -1) applyPrivateHandIfReady(mySeatIdx);
+        }
+
+        function applyPrivateHandIfReady(seatIdx) {
+            const hand = pendingPrivateHands.get(seatIdx);
+            if (!hand) return;
+            const me = gameState.players.find(p => p.id === seatIdx);
+            if(!me) return;
+
+            // 清掉背面占位牌
+            (me.meshCards || []).forEach(m => cardsGroup.remove(m));
+            me.meshCards = [];
+            me.hand = [];
+
+            // 顺序发两张正面牌（确保 hand.length 用于扇形偏移）
+            (async () => {
+                for (const card of hand) {
+                    me.hand.push(card);
+                    // eslint-disable-next-line no-await-in-loop
+                    await dealCardAnim(card, me, true);
+                }
+            })();
+        }
+
+        function dealOpponentPlaceholders() {
+            const dummy = { s: 'spades', r: 'A', v: 12 };
+            gameState.players.forEach((p) => {
+                if (p.id === mySeatIdx) return;
+                // 两张背面牌
+                for (let k = 0; k < 2; k++) {
+                    p.hand.push(dummy);
+                    dealCardAnim(dummy, p, false);
+                }
+            });
+        }
+
+        function showPlayerActionBadge(seatIdx, text) {
+            // 只显示上一家动作：新动作来时清掉旧的
+            if (lastActionSeatIdx !== null && lastActionSeatIdx !== undefined) {
+                const old = document.getElementById(`action-${lastActionSeatIdx}`);
+                if (old) old.style.display = 'none';
+            }
+            lastActionSeatIdx = seatIdx;
+            const el = document.getElementById(`action-${seatIdx}`);
+            if (!el) return;
+            el.innerText = text;
+            el.style.display = 'block';
         }
 
         function setupBase() {
@@ -675,9 +737,10 @@
                     <div style="font-size: 10px; opacity: 0.6; color: gold;">ID: ${seat.seatIdx}</div>
                     <div style="color: white; font-weight: bold;">${pName}</div>
                     <div id="chips-${seat.seatIdx}" class="chip-display">$${pChips}</div>
+                    <div id="action-${seat.seatIdx}" style="display:none; margin-top:6px; text-align:center; font-size:11px; color:#d4af37; letter-spacing:1px;">ACTION</div>
                 `;
                 container.appendChild(hud);
-                hudData.push({ el: hud, pos: pos.clone().add(new THREE.Vector3(0, 1.5, 0)) });
+                hudData.push({ el: hud, pos: pos.clone().add(new THREE.Vector3(0, 1.5, 0)), seatIdx: seat.seatIdx });
                 
                 updatePlayerStackMesh(playerObj);
             });
