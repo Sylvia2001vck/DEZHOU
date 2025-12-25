@@ -239,6 +239,10 @@
             <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
             <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
             <button id="theme-toggle">Night Mode</button>
+            <div style="margin-top: 10px;">
+                <button id="mic-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Mic: Off</button>
+                <div id="voice-status" style="font-size: 0.78em; opacity: 0.75; margin-top: 6px; text-align: left;">Voice: Not connected</div>
+            </div>
             <div id="rules-modal-anchor"></div>
         </div>
     </div>
@@ -302,6 +306,9 @@
         const BUILD_TAG = `build-${new Date().toISOString()}`;
         const IS_MULTIPLAYER = (location.protocol !== 'file:') && (typeof window.io === 'function');
         const socket = IS_MULTIPLAYER ? window.io() : null;
+        let mpWired = false;
+        let pendingJoin = false;
+        let joinedRoomOnce = false;
         let mySeatIdx = -1;
         let isHost = false;
         let lastRoomState = null;
@@ -310,10 +317,179 @@
         let lastActionSeatIdx = null;
         let lastHandOverNum = null;
         let potChipFX = []; // meshes for bet-to-pot animation
+        let matchOverSeenAt = 0;
+        let matchOverReceived = false;
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
             try { addToHistory(`[DBG] ${msg}`); } catch(_) {}
+        }
+
+        // ---- Voice (WebRTC audio) ----
+        const voiceState = {
+            connected: false,
+            micOn: false,
+            localStream: null,
+            peers: new Map(), // peerSocketId -> { pc, audioEl }
+            audioContainer: null
+        };
+
+        function setVoiceStatus(text) {
+            const el = document.getElementById('voice-status');
+            if (el) el.innerText = text;
+        }
+
+        function updateMicButton() {
+            const btn = document.getElementById('mic-toggle');
+            if (!btn) return;
+            btn.innerText = `Mic: ${voiceState.micOn ? 'On' : 'Off'}`;
+            btn.style.opacity = voiceState.connected ? '1' : '0.8';
+        }
+
+        async function ensureLocalAudioStream() {
+            if (voiceState.localStream) return voiceState.localStream;
+            if (!navigator.mediaDevices?.getUserMedia) throw new Error('getUserMedia not supported');
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                },
+                video: false
+            });
+            // Default: join voice but start muted until user enables mic
+            const track = stream.getAudioTracks()[0];
+            if (track) track.enabled = false;
+            voiceState.localStream = stream;
+
+            if (!voiceState.audioContainer) {
+                const c = document.createElement('div');
+                c.id = 'voice-audio-container';
+                c.style.display = 'none';
+                document.body.appendChild(c);
+                voiceState.audioContainer = c;
+            }
+            return stream;
+        }
+
+        function closePeer(peerId) {
+            const entry = voiceState.peers.get(peerId);
+            if (!entry) return;
+            try { entry.pc.ontrack = null; entry.pc.onicecandidate = null; } catch(_) {}
+            try { entry.pc.close(); } catch(_) {}
+            try { entry.audioEl?.remove?.(); } catch(_) {}
+            voiceState.peers.delete(peerId);
+        }
+
+        function shouldInitiateWith(peerId) {
+            // Deterministic initiator to avoid offer glare
+            const myId = socket?.id || '';
+            if (!myId || !peerId) return false;
+            return String(myId) < String(peerId);
+        }
+
+        async function ensurePeerConnection(peerId) {
+            if (!IS_MULTIPLAYER || !socket) return null;
+            if (!peerId || peerId === socket.id) return null;
+            if (!voiceState.localStream) return null;
+            if (voiceState.peers.has(peerId)) return voiceState.peers.get(peerId).pc;
+
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+            });
+
+            // add local audio
+            for (const t of voiceState.localStream.getTracks()) {
+                pc.addTrack(t, voiceState.localStream);
+            }
+
+            const audioEl = document.createElement('audio');
+            audioEl.autoplay = true;
+            audioEl.playsInline = true;
+            audioEl.muted = false;
+            voiceState.audioContainer?.appendChild(audioEl);
+
+            pc.ontrack = (ev) => {
+                const [stream] = ev.streams;
+                if (!stream) return;
+                audioEl.srcObject = stream;
+                // Some browsers require a gesture; we still try.
+                audioEl.play?.().catch(() => {});
+            };
+
+            pc.onicecandidate = (ev) => {
+                if (!ev.candidate) return;
+                socket.emit('voice_signal', { to: peerId, data: { type: 'ice', candidate: ev.candidate } });
+            };
+
+            voiceState.peers.set(peerId, { pc, audioEl });
+
+            // initiator sends offer
+            if (shouldInitiateWith(peerId)) {
+                const offer = await pc.createOffer({ offerToReceiveAudio: true });
+                await pc.setLocalDescription(offer);
+                socket.emit('voice_signal', { to: peerId, data: { type: 'offer', sdp: pc.localDescription } });
+            }
+
+            return pc;
+        }
+
+        async function handleVoiceSignal(from, data) {
+            try {
+                if (!from || from === socket?.id) return;
+                if (!data || typeof data.type !== 'string') return;
+                const pc = await ensurePeerConnection(from);
+                if (!pc) return;
+
+                if (data.type === 'offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    const ans = await pc.createAnswer();
+                    await pc.setLocalDescription(ans);
+                    socket.emit('voice_signal', { to: from, data: { type: 'answer', sdp: pc.localDescription } });
+                } else if (data.type === 'answer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                } else if (data.type === 'ice') {
+                    if (data.candidate) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch(_) {}
+                    }
+                }
+            } catch (e) {
+                console.warn('[voice] signal error', e);
+            }
+        }
+
+        async function voiceJoinIfPossible() {
+            if (!IS_MULTIPLAYER || !socket) return;
+            if (voiceState.connected) return;
+            if (!(Number.isInteger(mySeatIdx) && mySeatIdx >= 0)) return; // must be seated
+            try {
+                await ensureLocalAudioStream();
+                socket.emit('voice_join');
+                voiceState.connected = true;
+                setVoiceStatus('Voice: Connected (muted)');
+                updateMicButton();
+            } catch (e) {
+                setVoiceStatus('Voice: Mic permission denied');
+                console.warn('[voice] join failed', e);
+            }
+        }
+
+        function voiceLeaveAndCleanup(stopTracks) {
+            if (IS_MULTIPLAYER && socket && voiceState.connected) {
+                try { socket.emit('voice_leave'); } catch(_) {}
+            }
+            for (const peerId of [...voiceState.peers.keys()]) closePeer(peerId);
+            voiceState.connected = false;
+            voiceState.micOn = false;
+            if (stopTracks && voiceState.localStream) {
+                try { voiceState.localStream.getTracks().forEach(t => t.stop()); } catch(_) {}
+                voiceState.localStream = null;
+            } else if (voiceState.localStream) {
+                const tr = voiceState.localStream.getAudioTracks()[0];
+                if (tr) tr.enabled = false;
+            }
+            setVoiceStatus('Voice: Not connected');
+            updateMicButton();
         }
 
         const gameState = {
@@ -405,11 +581,25 @@
 
         function wireMultiplayer() {
             if(!IS_MULTIPLAYER) return;
+            if (mpWired) return;
+            mpWired = true;
+
+            // voice: handle reconnects cleanly
+            socket.on('connect', () => {
+                // on reconnect, socket.id changes; drop old peer state and rejoin
+                try { voiceLeaveAndCleanup(false); } catch(_) {}
+                voiceJoinIfPossible();
+            });
+            socket.on('disconnect', () => {
+                try { voiceLeaveAndCleanup(false); } catch(_) {}
+                setVoiceStatus('Voice: Disconnected');
+            });
 
             socket.on('you_state', ({ seatIdx, isHost: hostFlag }) => {
                 if (Number.isInteger(seatIdx) && seatIdx >= 0) {
                     mySeatIdx = seatIdx;
                     gameState.myPlayerIdx = seatIdx;
+                    voiceJoinIfPossible();
                 }
                 if (hostFlag !== null && hostFlag !== undefined) {
                     isHost = !!hostFlag;
@@ -419,10 +609,13 @@
             socket.on('seat_taken', ({ seatIdx }) => {
                 mySeatIdx = seatIdx;
                 gameState.myPlayerIdx = seatIdx;
+                voiceJoinIfPossible();
             });
 
             socket.on('room_state', (state) => {
                 lastRoomState = state;
+                joinedRoomOnce = true;
+                pendingJoin = false;
                 // 服务器广播时 isHost 可能为 null；这里用 hostSocketId vs 当前 socket.id 自行计算
                 isHost = (state.isHost !== null && state.isHost !== undefined)
                     ? !!state.isHost
@@ -454,17 +647,75 @@
                 }
             });
 
-            socket.on('activity', (msg) => addToHistory(msg));
-            socket.on('error_msg', ({msg}) => alert(msg));
+            socket.on('activity', (msg) => {
+                addToHistory(msg);
+                // Fallback: if "room_closed" is missed for any reason, still reset UI on match end.
+                if (IS_MULTIPLAYER && String(msg || '').trim() === 'Match over.') {
+                    matchOverSeenAt = Date.now();
+                    setTimeout(() => {
+                        // Only reload if we did NOT receive match_over or room_closed soon after
+                        if (!matchOverReceived && matchOverSeenAt && (Date.now() - matchOverSeenAt) < 5000) {
+                            try { location.reload(); } catch(_) {}
+                        }
+                    }, 2000);
+                }
+            });
+            socket.on('error_msg', ({msg}) => {
+                alert(msg);
+                // If we failed to join (e.g. room already started), return to lobby instead of getting stuck on seat screen.
+                if (pendingJoin && !joinedRoomOnce) {
+                    pendingJoin = false;
+                    const lobby = document.getElementById('lobby-overlay');
+                    const seat = document.getElementById('seat-overlay');
+                    if (seat) seat.style.display = 'none';
+                    if (lobby) lobby.style.display = 'flex';
+                }
+            });
+            socket.on('room_closed', ({ roomId, reason }) => {
+                // Room released after match over: return everyone to a clean lobby state.
+                try { voiceLeaveAndCleanup(true); } catch(_) {}
+                try { addToHistory(`Room ${roomId} closed (${reason}). Returning to lobby...`); } catch(_) {}
+                setTimeout(() => location.reload(), 300);
+            });
             socket.on('kicked', ({ seatIdx }) => {
                 addToHistory(`You were removed from Seat ${Number(seatIdx) + 1} by host.`);
                 if (mySeatIdx === seatIdx) {
                     mySeatIdx = -1;
                     gameState.myPlayerIdx = -1;
+                    try { voiceLeaveAndCleanup(false); } catch(_) {}
                 }
                 // 让 UI 立刻回到可选座状态（server 会随后广播 room_state）
                 document.getElementById('seat-overlay').style.display = 'block';
                 document.getElementById('seat-overlay').style.opacity = '1';
+            });
+
+            // voice wiring
+            socket.on('voice_peers', async ({ peers }) => {
+                try {
+                    if (!Array.isArray(peers)) return;
+                    setVoiceStatus(`Voice: Connected (${peers.length} peer${peers.length === 1 ? '' : 's'})${voiceState.micOn ? '' : ' (muted)'}`);
+                    for (const p of peers) {
+                        if (!p?.socketId) continue;
+                        await ensurePeerConnection(p.socketId);
+                    }
+                } catch (e) {
+                    console.warn('[voice] peers error', e);
+                }
+            });
+            socket.on('voice_peer_joined', async ({ peer }) => {
+                try {
+                    if (!peer?.socketId) return;
+                    await ensurePeerConnection(peer.socketId);
+                } catch (e) {
+                    console.warn('[voice] peer joined error', e);
+                }
+            });
+            socket.on('voice_peer_left', ({ socketId }) => {
+                if (!socketId) return;
+                closePeer(socketId);
+            });
+            socket.on('voice_signal', ({ from, data }) => {
+                handleVoiceSignal(from, data);
             });
 
             socket.on('player_action', ({ seatIdx, text }) => {
@@ -495,6 +746,59 @@
                 btn.innerText = isHost ? 'Next Round' : 'Waiting for Host';
                 btn.disabled = !isHost;
                 lastHandOverNum = handNum;
+            });
+
+            socket.on('match_over', ({ totalHands, standings, hands }) => {
+                matchOverReceived = true;
+                try { socket.emit('ack_match_over'); } catch(_) {}
+
+                // Show final results (all hands + final chip standings)
+                const modal = document.getElementById('summary-modal');
+                const title = modal?.querySelector?.('h2');
+                if (title) title.innerText = 'MATCH OVER';
+
+                const list = document.getElementById('summary-list-content');
+                if (list) {
+                    const safeStandings = Array.isArray(standings) ? standings : [];
+                    const safeHands = Array.isArray(hands) ? hands : [];
+                    list.innerHTML = "";
+
+                    const sec1 = document.createElement('div');
+                    sec1.style.cssText = 'text-align:left;margin-bottom:14px;color:rgba(212,175,55,0.8);font-weight:bold;';
+                    sec1.innerText = 'Final Standings';
+                    list.appendChild(sec1);
+
+                    safeStandings.forEach((p, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'summary-item';
+                        const isMe = Number.isInteger(mySeatIdx) && p.seatIdx === mySeatIdx;
+                        div.innerHTML = `<span style="color:${isMe ? 'gold' : '#fff'}">${idx + 1}. ${p.name || 'Player'} (ID:${p.seatIdx})</span> <b>$${Number(p.chips || 0)}</b>`;
+                        list.appendChild(div);
+                    });
+
+                    const spacer = document.createElement('div');
+                    spacer.style.height = '14px';
+                    list.appendChild(spacer);
+
+                    const sec2 = document.createElement('div');
+                    sec2.style.cssText = 'text-align:left;margin-bottom:10px;color:rgba(212,175,55,0.8);font-weight:bold;';
+                    sec2.innerText = `Hand Results (${Number(totalHands || safeHands.length)}/${Number(totalHands || safeHands.length)})`;
+                    list.appendChild(sec2);
+
+                    safeHands.sort((a,b) => (a.handNum||0)-(b.handNum||0)).forEach(h => {
+                        const winners = Array.isArray(h.winners) ? h.winners : [];
+                        const winNames = winners.map(w => w.name).join(' & ') || 'N/A';
+                        const row = document.createElement('div');
+                        row.style.cssText = 'text-align:left; font-size: 0.9em; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);';
+                        row.innerHTML = `<span style="color:#fff;opacity:0.9;">Hand ${h.handNum || ''}:</span> <span style="color:gold;">${winNames}</span> <span style="opacity:0.75;">(${h.desc || ''})</span>`;
+                        list.appendChild(row);
+                    });
+                }
+
+                // Disable game controls and show summary
+                document.querySelectorAll('#controls button').forEach(b => b.disabled = true);
+                if (modal) modal.style.display = 'block';
+                setVoiceStatus('Voice: Connected'); // keep voice; users can still talk during summary
             });
 
             socket.on('private_hand', ({ seatIdx, hand }) => {
@@ -1778,6 +2082,33 @@
 
         function setupEvents() {
             window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+
+            // Voice UI
+            updateMicButton();
+            if (!IS_MULTIPLAYER) {
+                setVoiceStatus('Voice: Online only');
+                const micBtn = document.getElementById('mic-toggle');
+                if (micBtn) micBtn.disabled = true;
+            } else {
+                const micBtn = document.getElementById('mic-toggle');
+                if (micBtn) {
+                    micBtn.onclick = async () => {
+                        // Must be seated to join voice (server enforces this)
+                        if (!(Number.isInteger(mySeatIdx) && mySeatIdx >= 0)) {
+                            alert('Take a seat before joining voice.');
+                            return;
+                        }
+                        await voiceJoinIfPossible();
+                        if (!voiceState.localStream) return;
+                        const track = voiceState.localStream.getAudioTracks()[0];
+                        const nextOn = !voiceState.micOn;
+                        voiceState.micOn = nextOn;
+                        if (track) track.enabled = nextOn;
+                        setVoiceStatus(voiceState.connected ? `Voice: Connected${nextOn ? '' : ' (muted)'}` : 'Voice: Not connected');
+                        updateMicButton();
+                    };
+                }
+            }
             
             // Lobby Interaction
             document.getElementById('lobby-next-btn').onclick = () => {
@@ -1794,6 +2125,8 @@
 
                 if (IS_MULTIPLAYER) {
                     wireMultiplayer();
+                    pendingJoin = true;
+                    joinedRoomOnce = false;
                     socket.emit('join_room', { roomId: room, name: user });
                     document.getElementById('lobby-overlay').style.display = 'none';
                     showSeatSelection(); // UI仍显示，但数据来自服务器

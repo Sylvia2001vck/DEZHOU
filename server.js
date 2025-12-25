@@ -42,6 +42,30 @@ function now() {
   return Date.now();
 }
 
+async function releaseRoom(room) {
+  const rid = room.roomId;
+  if (room.closeTimer) {
+    try { clearTimeout(room.closeTimer); } catch (_) {}
+    room.closeTimer = null;
+  }
+  try {
+    // Evict all connected sockets from this room so they don't see stale state.
+    const sockets = await io.in(rid).fetchSockets();
+    for (const s of sockets) {
+      try {
+        s.data.roomId = null;
+        s.data.seatIdx = null;
+        s.data.voiceJoined = false;
+        s.emit("room_closed", { roomId: rid, reason: "match_over" });
+        s.leave(rid);
+      } catch (_) {}
+    }
+  } catch (e) {
+    console.warn("[releaseRoom] fetchSockets failed:", e?.message || e);
+  }
+  rooms.delete(rid);
+}
+
 function makeRoom(roomId) {
   /** @type {Room} */
   const room = {
@@ -72,9 +96,39 @@ function makeRoom(roomId) {
 
     // processing
     turnNonce: 0,
-    aiTimer: null
+    aiTimer: null,
+    lastActorSeatIdx: null,
+
+    // voice (signaling only; media is P2P)
+    voice: {
+      participants: new Map() // socketId -> { socketId, seatIdx, name }
+    },
+
+    // match summary
+    handHistory: [], // [{handNum, winners:[{seatIdx,name}], desc}]
+    closing: false,
+    closeTimer: null,
+    expectedAcks: new Set(),
+    matchAcks: new Set()
   };
   return room;
+}
+
+function buildStandings(room) {
+  const out = [];
+  for (let i = 0; i < SEATS; i++) {
+    const seat = room.seats[i];
+    if (!seat) continue;
+    const p = getPlayer(room, i);
+    out.push({
+      seatIdx: i,
+      type: seat.type,
+      name: seat.name,
+      chips: p ? p.chips : 0
+    });
+  }
+  out.sort((a, b) => (b.chips || 0) - (a.chips || 0));
+  return out;
 }
 
 function seatToPublic(seat, seatIdx) {
@@ -493,10 +547,37 @@ function finishHand(room) {
 
   const inHand = getInHandSeats(room);
   if (inHand.length === 0) {
+    // This shouldn't normally happen; prefer awarding pot to last actor to avoid dead-end states.
+    const fallbackSeat = Number.isInteger(room.lastActorSeatIdx) ? room.lastActorSeatIdx : null;
+    const fallbackSeatValid =
+      fallbackSeat !== null &&
+      fallbackSeat !== undefined &&
+      room.seats[fallbackSeat] &&
+      getPlayer(room, fallbackSeat);
+
+    if (fallbackSeatValid) {
+      const wp = getPlayer(room, fallbackSeat);
+      wp.chips += room.pot;
+      const winnerName = room.seats[fallbackSeat].name;
+      broadcastActivity(room, `Game Over. ${winnerName} wins (fallback: no active players).`);
+      room.pot = 0;
+      room.round = "HAND_OVER";
+      io.to(room.roomId).emit("hand_over", {
+        handNum: room.handNum,
+        totalHands: room.totalHands,
+        winners: [{ seatIdx: fallbackSeat, name: winnerName }],
+        desc: "No active players (fallback)"
+      });
+      room.handHistory.push({ handNum: room.handNum, winners: [{ seatIdx: fallbackSeat, name: winnerName }], desc: "No active players (fallback)" });
+      broadcastGame(room);
+      return;
+    }
+
     broadcastActivity(room, "Hand ended (no active players).");
     room.pot = 0;
     room.round = "HAND_OVER";
     io.to(room.roomId).emit("hand_over", { handNum: room.handNum, totalHands: room.totalHands, winners: [], desc: "No active players" });
+    room.handHistory.push({ handNum: room.handNum, winners: [], desc: "No active players" });
     broadcastGame(room);
     return;
   }
@@ -509,6 +590,7 @@ function finishHand(room) {
     room.pot = 0;
     room.round = "HAND_OVER";
     io.to(room.roomId).emit("hand_over", { handNum: room.handNum, totalHands: room.totalHands, winners: [{ seatIdx: winnerSeat, name: winnerName }], desc: "All others folded" });
+    room.handHistory.push({ handNum: room.handNum, winners: [{ seatIdx: winnerSeat, name: winnerName }], desc: "All others folded" });
     broadcastGame(room);
     return;
   }
@@ -534,6 +616,11 @@ function finishHand(room) {
   io.to(room.roomId).emit("hand_over", {
     handNum: room.handNum,
     totalHands: room.totalHands,
+    winners: winners.map((w) => ({ seatIdx: w.seatIdx, name: room.seats[w.seatIdx].name })),
+    desc: best.desc
+  });
+  room.handHistory.push({
+    handNum: room.handNum,
     winners: winners.map((w) => ({ seatIdx: w.seatIdx, name: room.seats[w.seatIdx].name })),
     desc: best.desc
   });
@@ -604,6 +691,9 @@ function handleAction(room, seatIdx, action) {
   const p = getPlayer(room, seatIdx);
   if (!p || p.isFolded || p.isBankrupt) return;
   if (room.activeSeatIdx !== seatIdx) return;
+
+  // track last valid actor (used as a fallback in rare edge cases)
+  room.lastActorSeatIdx = seatIdx;
 
   const callAmt = Math.max(0, room.currentMaxBet - p.currentBet);
   const actType = action.type;
@@ -707,6 +797,7 @@ io.on("connection", (socket) => {
   socket.data.roomId = null;
   socket.data.seatIdx = null;
   socket.data.name = null;
+  socket.data.voiceJoined = false;
 
   function emitYouState(room) {
     if (!room) return;
@@ -727,6 +818,15 @@ io.on("connection", (socket) => {
       room = makeRoom(rid);
       rooms.set(rid, room);
     }
+    if (room.closing) {
+      socket.emit("error_msg", { msg: "This room has ended and is closing. Please rejoin in a moment (or use a new Room ID)." });
+      return;
+    }
+    // If a match is already running in this room, do not allow new joins.
+    if (room.started) {
+      socket.emit("error_msg", { msg: "Game already started in this room. Please wait for it to finish or use a new Room ID." });
+      return;
+    }
     // host 选举：如果没有 host 或 host socket 已不在线，则把当前加入者设为 host
     const hostOnline = room.hostSocketId && io.sockets.sockets.has(room.hostSocketId);
     if (!room.hostSocketId || !hostOnline) room.hostSocketId = socket.id;
@@ -739,6 +839,51 @@ io.on("connection", (socket) => {
     emitYouState(room);
     broadcastRoom(room);
     broadcastGame(room);
+  });
+
+  // ---- Voice signaling (WebRTC; audio is P2P) ----
+  socket.on("voice_join", () => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room) return;
+
+    // Require seat to join voice to avoid spectators joining voice channel.
+    const seatIdx = socket.data.seatIdx;
+    if (!Number.isInteger(seatIdx) || seatIdx < 0 || seatIdx >= SEATS) return;
+    const seat = room.seats[seatIdx];
+    if (!seat || seat.type !== "player" || seat.socketId !== socket.id) return;
+
+    const name = socket.data.name || seat.name || "Player";
+    room.voice.participants.set(socket.id, { socketId: socket.id, seatIdx, name });
+    socket.data.voiceJoined = true;
+
+    const peers = [...room.voice.participants.values()].filter((p) => p.socketId !== socket.id);
+    socket.emit("voice_peers", { peers });
+    socket.to(rid).emit("voice_peer_joined", { peer: { socketId: socket.id, seatIdx, name } });
+  });
+
+  socket.on("voice_leave", () => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room) return;
+    if (!room.voice.participants.has(socket.id)) return;
+    room.voice.participants.delete(socket.id);
+    socket.data.voiceJoined = false;
+    socket.to(rid).emit("voice_peer_left", { socketId: socket.id });
+  });
+
+  socket.on("voice_signal", ({ to, data }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room) return;
+    if (!socket.data.voiceJoined) return;
+    if (!room.voice.participants.has(socket.id)) return;
+    if (!to || typeof to !== "string") return;
+    if (!room.voice.participants.has(to)) return;
+    io.to(to).emit("voice_signal", { from: socket.id, data });
   });
 
   socket.on("take_seat", ({ seatIdx }) => {
@@ -851,7 +996,7 @@ io.on("connection", (socket) => {
     handleAction(room, seatIdx, payload || {});
   });
 
-  socket.on("next_hand", () => {
+  socket.on("next_hand", async () => {
     const rid = socket.data.roomId;
     if (!rid) return;
     const room = rooms.get(rid);
@@ -861,10 +1006,35 @@ io.on("connection", (socket) => {
     if (room.pot !== 0) return;
     if (room.handNum >= room.totalHands) {
       broadcastActivity(room, "Match over.");
+      // Send match summary before releasing the room.
+      const standings = buildStandings(room);
+      const hands = Array.isArray(room.handHistory) ? room.handHistory.slice(0) : [];
+      io.to(room.roomId).emit("match_over", {
+        roomId: room.roomId,
+        totalHands: room.totalHands,
+        standings,
+        hands
+      });
+
+      // Mark closing and schedule room release after everyone has had time to view results.
+      room.closing = true;
       room.started = false;
       room.round = "WAITING";
-      broadcastRoom(room);
-      broadcastGame(room);
+
+      // Track currently connected sockets for ack-based early release
+      try {
+        const socks = await io.in(room.roomId).fetchSockets();
+        room.expectedAcks = new Set(socks.map((s) => s.id));
+        room.matchAcks = new Set();
+      } catch (_) {
+        room.expectedAcks = new Set();
+        room.matchAcks = new Set();
+      }
+
+      // Hard timeout release (90s)
+      room.closeTimer = setTimeout(() => {
+        releaseRoom(room);
+      }, 90 * 1000);
       return;
     }
 
@@ -873,11 +1043,47 @@ io.on("connection", (socket) => {
     startHand(room);
   });
 
+  socket.on("ack_match_over", () => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || !room.closing) return;
+    room.matchAcks.add(socket.id);
+    // If all currently-connected sockets acknowledged, release immediately.
+    let all = true;
+    for (const sid of room.expectedAcks) {
+      if (!room.matchAcks.has(sid)) {
+        all = false;
+        break;
+      }
+    }
+    if (all) {
+      releaseRoom(room);
+    }
+  });
+
   socket.on("disconnect", () => {
     const rid = socket.data.roomId;
     if (!rid) return;
     const room = rooms.get(rid);
     if (!room) return;
+
+    // match-over ack set maintenance
+    if (room.closing && room.expectedAcks?.has(socket.id)) {
+      room.expectedAcks.delete(socket.id);
+      room.matchAcks.delete(socket.id);
+      // if no one left to ack, release now
+      if (room.expectedAcks.size === 0) {
+        releaseRoom(room);
+        return;
+      }
+    }
+
+    // voice cleanup
+    if (room.voice?.participants?.has(socket.id)) {
+      room.voice.participants.delete(socket.id);
+      socket.to(rid).emit("voice_peer_left", { socketId: socket.id });
+    }
 
     // free seat
     for (let i = 0; i < SEATS; i++) {
