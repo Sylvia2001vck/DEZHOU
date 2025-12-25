@@ -20,6 +20,18 @@ const io = new SocketIOServer(server, {
 });
 
 // Serve the single-page frontend
+app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+app.get("/readyz", (_req, res) => res.status(200).json({ ok: true }));
+
+// Minimal request logging (helps debug Railway "failed to respond")
+app.use((req, _res, next) => {
+  // avoid noisy logs for socket polling
+  if (!req.path.startsWith("/socket.io")) {
+    console.log(`[HTTP] ${req.method} ${req.path}`);
+  }
+  next();
+});
+
 app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.use(express.static(__dirname));
 
@@ -843,8 +855,8 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`nebula-poker listening on :${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`nebula-poker listening on 0.0.0.0:${PORT}`);
 });
 
 /**
