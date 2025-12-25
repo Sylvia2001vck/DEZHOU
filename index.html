@@ -486,6 +486,9 @@
                 const winNames = (winners || []).map(w => w.name).join(' & ');
                 addToHistory(`--- HAND OVER ${handNum}/${totalHands}: ${winNames || 'N/A'} (${desc || ''}) ---`);
 
+                // Pot -> winner chip push animation (multiplayer FX)
+                try { animatePotToWinners(winners || []); } catch(_) {}
+
                 const btn = document.getElementById('btn-next');
                 document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
                 btn.style.display = 'block';
@@ -701,7 +704,8 @@
                     new THREE.MeshStandardMaterial({ color: 0xd4af37, transparent: true, opacity: 0.55, metalness: 0.8, roughness: 0.15 })
                 );
                 chip.position.set(p.pos.x, 0.08, p.pos.z);
-                chip.rotation.x = Math.PI / 2;
+                // 让筹码“平躺”在桌面（和离线一致）：Cylinder 默认就是平躺（圆面朝上）
+                chip.rotation.set(0, Math.random() * Math.PI * 2, 0);
                 chipsGroup.add(chip);
                 potChipFX.push(chip);
 
@@ -715,11 +719,47 @@
                     ease: "power2.out"
                 });
                 gsap.to(chip.material, {
-                    opacity: 0.25,
+                    opacity: 0.5,
                     duration: 0.65,
                     ease: "power1.out"
                 });
             }
+        }
+
+        function animatePotToWinners(winners) {
+            if (!IS_MULTIPLAYER) return;
+            if (!Array.isArray(winners) || winners.length === 0) return;
+            if (!potChipFX || potChipFX.length === 0) return;
+
+            const winnerSeats = winners.map(w => w.seatIdx).filter(s => Number.isInteger(s));
+            if (winnerSeats.length === 0) return;
+
+            // move existing pot FX chips to winners (split)
+            potChipFX.forEach((chip, i) => {
+                const seatIdx = winnerSeats[i % winnerSeats.length];
+                const p = gameState.players.find(pp => pp.id === seatIdx);
+                if (!p) return;
+                const wx = p.pos.x + (Math.random() - 0.5) * 0.7;
+                const wz = p.pos.z + (Math.random() - 0.5) * 0.7;
+                gsap.to(chip.position, {
+                    x: wx,
+                    z: wz,
+                    y: 0.05,
+                    duration: 1.0,
+                    ease: "power2.inOut"
+                });
+                gsap.to(chip.material, {
+                    opacity: 0.0,
+                    duration: 1.05,
+                    ease: "power1.inOut",
+                    onComplete: () => {
+                        try { chipsGroup.remove(chip); } catch(_) {}
+                    }
+                });
+            });
+
+            // clear list after animation window
+            setTimeout(() => { potChipFX = []; }, 1200);
         }
 
         function setupBase() {
