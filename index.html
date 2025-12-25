@@ -35,10 +35,10 @@
         .panel { background: rgba(25, 12, 5, 0.7); padding: 15px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.3); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
         
         /* Rules Modal */
-        #rules-btn { position: absolute; top: 20px; left: 20px; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: #ffd700; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
+        #rules-btn { position: relative; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: #ffd700; padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
         #rules-btn:hover { background: rgba(212, 175, 55, 0.4); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
-        /* Rules panel: docked on the left, does not cover the table center */
-        #rules-modal { display: none; position: fixed; top: 80px; left: 20px; transform: none; background: rgba(10, 5, 2, 0.75); border: 1px solid rgba(255, 215, 0, 0.55); padding: 18px 18px 12px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 140px); overflow-y: auto; backdrop-filter: blur(14px); color: #fff; box-shadow: 0 0 35px rgba(212, 175, 55, 0.18); }
+        /* Rules panel: appears directly under the Rules button (inside the ui panel) */
+        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: rgba(10, 5, 2, 0.85); border: 1px solid rgba(255, 215, 0, 0.55); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: #fff; box-shadow: 0 0 35px rgba(212, 175, 55, 0.18); }
         #rules-modal h2 { color: #ffd700; margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 10px; }
         #rules-modal ul { list-style: none; padding: 0; }
         #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
@@ -118,7 +118,6 @@
     <div id="container"></div>
     <div id="labels-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></div>
     
-    <button id="rules-btn">Rules & Rankings</button>
     <div id="rules-modal">
         <span id="close-rules">&times;</span>
         <h2 style="text-align: center;">Hand Rankings</h2>
@@ -190,6 +189,8 @@
         <div class="panel" style="width: 240px; margin-left: 150px;">
             <div id="game-msg">WAITING</div>
             <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
+            <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
+            <div id="rules-modal-anchor"></div>
         </div>
     </div>
 
@@ -364,6 +365,12 @@
                     if(!s) return;
                     gameState.seatMeta[s.seatIdx] = { type: s.type, name: s.name };
                 });
+
+                // 同步联机设置（initial chips / total hands）
+                if (state.settings) {
+                    if (Number.isFinite(state.settings.initialChips)) gameState.initialChips = state.settings.initialChips;
+                    if (Number.isFinite(state.settings.totalHands)) gameState.totalRounds = state.settings.totalHands;
+                }
                 // 同步 seats 到本地 seatConfig：player/ai/null
                 gameState.seatConfig = Array(CONFIG.numPlayers).fill(null);
                 (state.seats || []).forEach(s => {
@@ -409,6 +416,10 @@
                 // 服务器开启后，确保所有人都进入牌桌
                 if (s.started) {
                     enterMultiplayerGame();
+                }
+                if (s.settings) {
+                    if (Number.isFinite(s.settings.initialChips)) gameState.initialChips = s.settings.initialChips;
+                    if (Number.isFinite(s.settings.totalHands)) gameState.totalRounds = s.settings.totalHands;
                 }
                 // 只做 UI/渲染同步（逻辑以服务端为准）
                 gameState.round = s.round;
@@ -1556,9 +1567,24 @@
             };
 
             // Rules Modal Events
-            document.getElementById('rules-btn').onclick = () => { document.getElementById('rules-modal').style.display = 'block'; };
-            document.getElementById('close-rules').onclick = () => { document.getElementById('rules-modal').style.display = 'none'; };
-            window.onclick = (event) => { if (event.target == document.getElementById('rules-modal')) document.getElementById('rules-modal').style.display = 'none'; };
+            // Re-anchor rules panel under the Rules button (inside the same UI panel)
+            const rulesBtn = document.getElementById('rules-btn');
+            const rulesModal = document.getElementById('rules-modal');
+            const rulesAnchor = document.getElementById('rules-modal-anchor');
+            if (rulesAnchor && rulesModal) rulesAnchor.appendChild(rulesModal);
+
+            rulesBtn.onclick = () => {
+                rulesModal.style.display = (rulesModal.style.display === 'block') ? 'none' : 'block';
+            };
+            document.getElementById('close-rules').onclick = () => { rulesModal.style.display = 'none'; };
+            // 点击其它区域关闭（但在面板内部点击不关）
+            window.addEventListener('click', (event) => {
+                if (!rulesModal || !rulesBtn) return;
+                const target = event.target;
+                if (rulesModal.style.display !== 'block') return;
+                if (rulesModal.contains(target) || rulesBtn.contains(target)) return;
+                rulesModal.style.display = 'none';
+            });
 
             document.getElementById('btn-plus').onclick = () => { currentRaiseInput += gameState.minRaise; updateUI(); };
             document.getElementById('btn-minus').onclick = () => { if(currentRaiseInput > gameState.minRaise) currentRaiseInput -= gameState.minRaise; updateUI(); };

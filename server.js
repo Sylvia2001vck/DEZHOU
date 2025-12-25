@@ -42,6 +42,8 @@ function makeRoom(roomId) {
     // settings (host-controlled)
     totalHands: 5,
     initialChips: 1000,
+    smallBlind: 50,
+    bigBlind: 100,
 
     // game state
     handNum: 0,
@@ -179,7 +181,7 @@ function getPublicGameState(room) {
   return {
     roomId: room.roomId,
     started: room.started,
-    settings: { totalHands: room.totalHands, initialChips: room.initialChips },
+    settings: { totalHands: room.totalHands, initialChips: room.initialChips, smallBlind: room.smallBlind, bigBlind: room.bigBlind },
     handNum: room.handNum,
     dealerSeatIdx: room.dealerSeatIdx,
     activeSeatIdx: room.activeSeatIdx,
@@ -312,7 +314,7 @@ function ensurePlayersMap(room) {
     if (!room.players.has(i)) {
       room.players.set(i, {
         seatIdx: i,
-        chips: room.initialChips,
+        chips: Number.isFinite(room.initialChips) ? room.initialChips : 1000,
         currentBet: 0,
         isFolded: false,
         isBankrupt: false,
@@ -329,7 +331,9 @@ function ensurePlayersMap(room) {
 function postBlind(room, seatIdx, amount) {
   const p = getPlayer(room, seatIdx);
   if (!p || p.isBankrupt) return 0;
-  const real = Math.min(amount, p.chips);
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) return 0;
+  const real = Math.min(amt, p.chips);
   p.chips -= real;
   p.currentBet += real;
   room.pot += real;
@@ -545,7 +549,9 @@ function requestTurn(room) {
 function placeBet(room, seatIdx, amount) {
   const p = getPlayer(room, seatIdx);
   if (!p || p.isFolded || p.isBankrupt) return 0;
-  const real = Math.min(amount, p.chips);
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) return 0;
+  const real = Math.min(amt, p.chips);
   p.chips -= real;
   p.currentBet += real;
   room.pot += real;
@@ -762,6 +768,8 @@ io.on("connection", (socket) => {
 
     room.totalHands = Math.max(1, Math.min(50, Number(totalHands || 5)));
     room.initialChips = Math.max(1000, Number(initialChips || 1000));
+    if (!Number.isFinite(room.totalHands)) room.totalHands = 5;
+    if (!Number.isFinite(room.initialChips)) room.initialChips = 1000;
     room.started = true;
     room.handNum = 0;
     room.dealerSeatIdx = 0;
