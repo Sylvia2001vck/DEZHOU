@@ -573,8 +573,14 @@ function requestTurn(room) {
 
   const seat = room.seats[room.activeSeatIdx];
   if (seat && seat.type === "ai") {
+    // CRITICAL: capture seatIdx now; do NOT reference room.activeSeatIdx inside timeout
+    const aiSeatIdx = room.activeSeatIdx;
     room.aiTimer = setTimeout(() => {
-      aiAct(room, room.activeSeatIdx);
+      // only act if it's still this AI's turn and seat is still AI
+      if (room.activeSeatIdx !== aiSeatIdx) return;
+      const s = room.seats[aiSeatIdx];
+      if (!s || s.type !== "ai") return;
+      aiAct(room, aiSeatIdx);
     }, 700);
   } else {
     // human: client will send action
