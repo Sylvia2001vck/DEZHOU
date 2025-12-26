@@ -38,16 +38,26 @@
         [data-theme="light"] body {
             background-color: var(--bg);
             background-image:
-                /* metallic sheen */
-                radial-gradient(1200px 900px at 18% 18%, rgba(255,255,255,0.42), rgba(255,255,255,0.0) 62%),
-                radial-gradient(1000px 800px at 82% 22%, rgba(255,255,255,0.22), rgba(255,255,255,0.0) 62%),
-                radial-gradient(900px 900px at 50% 95%, rgba(10, 25, 45, 0.18), rgba(0,0,0,0.0) 62%),
-                /* brushed metal streaks */
-                repeating-linear-gradient(100deg, rgba(255,255,255,0.10) 0 1px, rgba(0,0,0,0.0) 1px 9px),
-                repeating-linear-gradient(280deg, rgba(0,0,0,0.05) 0 1px, rgba(0,0,0,0.0) 1px 13px),
-                /* base gradient */
-                linear-gradient(180deg, rgba(245,250,255,0.35), rgba(120,140,160,0.18) 45%, rgba(20,30,40,0.22));
-            background-blend-mode: screen, screen, multiply, overlay, overlay, normal;
+                /* Strong metallic highlight band (works even without blend modes) */
+                linear-gradient(115deg,
+                    rgba(255,255,255,0.00) 0%,
+                    rgba(255,255,255,0.00) 36%,
+                    rgba(255,255,255,0.65) 46%,
+                    rgba(255,255,255,0.10) 54%,
+                    rgba(255,255,255,0.00) 66%,
+                    rgba(255,255,255,0.00) 100%
+                ),
+                /* Soft sheen */
+                radial-gradient(1100px 900px at 18% 16%, rgba(255,255,255,0.34), rgba(255,255,255,0.0) 60%),
+                radial-gradient(950px 780px at 84% 20%, rgba(255,255,255,0.18), rgba(255,255,255,0.0) 62%),
+                radial-gradient(900px 900px at 50% 95%, rgba(10, 25, 45, 0.22), rgba(0,0,0,0.0) 62%),
+                /* Brushed metal streaks (matte texture) */
+                repeating-linear-gradient(96deg, rgba(255,255,255,0.12) 0 1px, rgba(0,0,0,0.0) 1px 10px),
+                repeating-linear-gradient(276deg, rgba(0,0,0,0.07) 0 1px, rgba(0,0,0,0.0) 1px 14px),
+                /* Base gradient */
+                linear-gradient(180deg, rgba(235,245,255,0.40), rgba(120,140,160,0.16) 45%, rgba(20,30,40,0.26));
+            /* Use normal stacking so it looks metallic even on browsers that ignore blend modes */
+            background-blend-mode: normal;
         }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
@@ -76,12 +86,21 @@
 
         #ui-overlay { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; width: 100%; }
         .panel { background: var(--panel-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--panel-border); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.35); }
+
+        /* Desktop resizable HUD panel (PRE-FLOP: YOU area) */
+        #hud-panel {
+            width: 260px;
+            min-width: 210px;
+            max-width: 520px;
+            max-height: 80vh;
+            overflow: auto;
+            resize: both;
+        }
         
         /* Rules Modal */
-        #rules-btn { position: relative; z-index: 20; background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
-        #rules-btn:hover { background: var(--btn-hover-bg); box-shadow: 0 0 15px var(--btn-hover-shadow); }
-        /* Rules panel: appears directly under the Rules button (inside the ui panel) */
-        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.30); padding: 12px 12px 8px; border-radius: 14px; z-index: 100; width: 330px; max-height: calc(100vh - 170px); overflow-y: auto; backdrop-filter: blur(12px); color: var(--text); box-shadow: 0 0 28px rgba(0,0,0,0.16); scrollbar-width: thin; }
+        #rules-btn { position: relative; z-index: 20; pointer-events: auto; }
+        /* Rules panel: floating (outside HUD box), positioned by JS under the ? button */
+        #rules-modal { display: none; position: fixed; top: 90px; left: 20px; margin: 0; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.30); padding: 12px 12px 8px; border-radius: 14px; z-index: 2000; width: 330px; max-height: calc(100vh - 170px); overflow-y: auto; backdrop-filter: blur(12px); color: var(--text); box-shadow: 0 0 28px rgba(0,0,0,0.16); scrollbar-width: thin; }
         #rules-modal::-webkit-scrollbar { width: 10px; }
         #rules-modal::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.35); border-radius: 10px; border: 2px solid rgba(0,0,0,0.15); }
         #rules-modal::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 10px; }
@@ -99,6 +118,9 @@
         #close-rules { float: right; cursor: pointer; color: var(--accent); font-size: 20px; }
 
         #history-panel { position: absolute; right: 20px; top: 20px; width: 280px; max-height: 40vh; overflow-y: auto; z-index: 10; }
+        /* Desktop: allow Activity panel to collapse (Hide/Show) */
+        #history-panel.collapsed #history-list { display: none; }
+        #history-panel.collapsed { width: 180px; max-height: none; }
         #controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 10; align-items: center; }
         
         .touch-btn { 
@@ -108,6 +130,51 @@
         }
         .touch-btn:hover:not(:disabled) { background: var(--btn-hover-bg); box-shadow: 0 0 20px var(--btn-hover-shadow); }
         .touch-btn:disabled { opacity: 0.1; cursor: not-allowed; }
+
+        /* Icon-only buttons (desktop default sizing; mobile overrides below) */
+        .icon-btn {
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            padding: 0 !important;
+            border-radius: 999px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 0 !important; /* hide text */
+            line-height: 1 !important;
+            letter-spacing: 0 !important;
+        }
+        .icon-btn::before {
+            content: attr(data-icon);
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        /* HUD panel collapsed => compact: show game-msg + horizontal icon row */
+        #hud-panel.collapsed {
+            width: 270px;
+            min-width: 220px;
+            max-width: 320px;
+            padding: 10px;
+            resize: none;
+            overflow: visible;
+        }
+        #hud-panel.collapsed #pot-row,
+        #hud-panel.collapsed #voice-status {
+            display: none !important;
+        }
+        #hud-panel.collapsed #hud-buttons {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 8px;
+            justify-content: flex-start;
+            align-items: center;
+            margin-top: 10px;
+        }
+        #hud-panel.collapsed #hud-buttons .touch-btn { margin-top: 0 !important; }
+        #hud-panel.collapsed #game-msg { font-size: 0.95em; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.18); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.12); }
         .adjust-btn { background: none; border: none; color: var(--accent); font-size: 20px; cursor: pointer; font-weight: bold; width: 30px; }
@@ -119,20 +186,12 @@
         .chip-display { color: var(--text); font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(0,0,0,0.25); }
         #game-msg { font-size: 1.1em; color: var(--text); text-align: left; letter-spacing: 2px; }
 
-        #theme-toggle {
-            margin: 10px auto 0;
-            display: block;
-            padding: 8px 14px;
-            border-radius: 20px;
-            border: 1px solid var(--btn-border);
-            background: var(--btn-bg);
-            color: var(--btn-text);
-            cursor: pointer;
-            pointer-events: auto;
-        }
+        #theme-toggle { pointer-events: auto; }
 
         /* -------- Mobile responsiveness -------- */
         @media (max-width: 600px) {
+            /* HUD panel not resizable on mobile */
+            #hud-panel { resize: none; max-width: none; }
             body { overflow: hidden; }
             .lobby-panel { width: calc(100vw - 24px); padding: 18px; border-radius: 16px; }
             .lobby-btn { padding: 12px; font-size: 0.95em; }
@@ -153,27 +212,29 @@
             .seat-box { padding: 10px; }
             .seat-action-btn { padding: 8px; font-size: 0.78em; }
 
-            /* Start Game pinned to bottom safe area */
+            /* Start Game pinned to the bottom of seat selection (sticky) */
             .start-game-area {
-                position: fixed;
-                left: 50%;
-                transform: translateX(-50%);
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+                position: sticky;
+                left: auto;
+                transform: none;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
                 width: calc(100vw - 20px);
                 z-index: 980;
+                margin: 8px auto 10px;
             }
             #start-game-btn { width: 100% !important; }
 
-            /* Decor panel (seat selection): compact corner card + collapsible */
+            /* Decor panel (seat selection): stick near the very bottom, just above Start Game */
             #decor-panel {
-                position: fixed !important;
-                left: 10px !important;
+                position: sticky !important;
+                left: auto !important;
                 transform: none !important;
-                width: min(260px, calc(100vw - 20px)) !important;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 74px) !important;
+                width: calc(100vw - 20px) !important;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important;
                 z-index: 970;
                 max-height: 42vh;
                 overflow-y: auto;
+                margin: 8px auto 8px;
             }
             #decor-panel.collapsed #decor-body,
             #decor-panel.collapsed #decor-hint { display: none; }
@@ -191,11 +252,11 @@
                 right: 10px;
                 left: auto;
                 bottom: auto;
-                width: min(250px, calc(100vw - 20px));
+                width: min(210px, calc(100vw - 20px));
                 max-height: 28vh;
                 z-index: 12;
             }
-            #history-panel #history-list { max-height: 22vh; overflow-y: auto; }
+            #history-panel #history-list { max-height: 20vh; overflow-y: auto; font-size: 0.72em; line-height: 1.35; }
             #history-panel.collapsed #history-list { display: none; }
             #controls {
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
@@ -207,28 +268,11 @@
             .touch-btn { padding: 10px 12px; min-width: 0; font-size: 0.86em; }
             .adjust-panel { width: 100%; justify-content: center; }
 
-            /* Icon-only buttons on mobile (keeps aria-label/title for accessibility) */
-            .icon-btn {
-                width: 38px !important;
-                height: 38px !important;
-                min-width: 38px !important;
-                padding: 0 !important;
-                border-radius: 999px !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                font-size: 0 !important; /* hide text */
-                line-height: 1 !important;
-                letter-spacing: 0 !important;
-            }
-            .icon-btn::before {
-                content: attr(data-icon);
-                font-size: 18px;
-                line-height: 1;
-            }
+            /* Icon-only buttons smaller on mobile */
+            .icon-btn { width: 32px !important; height: 32px !important; min-width: 32px !important; }
+            .icon-btn::before { font-size: 16px; }
             /* Make the small icon buttons a bit less visually heavy */
-            #history-collapse.icon-btn,
-            #decor-collapse.icon-btn {
+            #history-collapse.icon-btn {
                 border-radius: 999px !important;
                 padding: 0 !important;
             }
@@ -280,7 +324,6 @@
                         <option value="cigar">Cigar</option>
                     </select>
                     <button id="decor-apply" class="lobby-btn" style="width: 160px; margin:0; padding: 12px 14px;">Apply</button>
-                    <button id="decor-collapse" class="touch-btn" style="width: 78px; padding: 10px 10px; margin:0;">Hide</button>
                 </div>
             </div>
             <div id="decor-hint" style="margin-top:8px; font-size: 0.78em; opacity: 0.8;">Your choice will appear on the table to the right of your hole cards (visible to everyone).</div>
@@ -365,18 +408,22 @@
     </div>
     
     <div id="ui-overlay">
-        <div class="panel" style="width: 260px; margin-left: 0;">
-            <div id="game-msg">WAITING</div>
-            <div style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
-            <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
-            <button id="theme-toggle">Night Mode</button>
-            <div style="margin-top: 10px;">
+        <div id="hud-panel" class="panel" style="margin-left: 0;">
+            <div id="hud-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div id="game-msg">WAITING</div>
+                <button id="hud-collapse" class="touch-btn" style="width:78px; padding: 8px 10px; margin:0; font-size:0.82em;">Hide</button>
+            </div>
+            <div id="pot-row" style="color: #ffcc99; font-size: 1em; margin-top: 5px; text-align: center;">Pot: <b id="pot-amount" style="color: #00ff00;">0</b></div>
+            <div id="hud-buttons" style="margin-top: 10px; display:flex; flex-direction:column; gap:10px;">
+                <button id="rules-btn" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Rules & Rankings</button>
+                <button id="reset-view" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Reset View</button>
+                <button id="theme-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Night Mode</button>
                 <button id="bgm-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">BGM: Off</button>
                 <button id="sfx-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">SFX: On</button>
                 <button id="lang-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Language: EN</button>
                 <button id="mic-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Mic: Off</button>
-                <div id="voice-status" style="font-size: 0.78em; opacity: 0.75; margin-top: 6px; text-align: left;">Voice: Not connected</div>
             </div>
+            <div id="voice-status" style="font-size: 0.78em; opacity: 0.75; margin-top: 6px; text-align: left;">Voice: Not connected</div>
             <div id="rules-modal-anchor"></div>
         </div>
     </div>
@@ -444,6 +491,11 @@
         let tableParticles = null;
         let hudData = [];
         let currentRaiseInput = 50;
+        const DEFAULT_VIEW = {
+            cameraPos: new THREE.Vector3(0, 11, 15),
+            target: new THREE.Vector3(0, 0, 0),
+            fov: 45
+        };
         
         const BUILD_TAG = `build-${new Date().toISOString()}`;
         const IS_MULTIPLAYER = (location.protocol !== 'file:') && (typeof window.io === 'function');
@@ -495,6 +547,7 @@
                     waiting_host: 'Waiting for Host',
                     next_round: 'Next Round',
                     rules: 'Rules & Rankings',
+                    reset_view: 'Reset View',
                     light_mode: 'Light Mode',
                     night_mode: 'Night Mode',
                     final_standings: 'Final Standings',
@@ -542,6 +595,9 @@
                     ,
                     history_hide: 'Hide',
                     history_show: 'Show'
+                    ,
+                    hud_hide: 'Hide',
+                    hud_show: 'Show'
                 },
                 zh: {
                     lang_label: 'Language: 中文',
@@ -556,6 +612,7 @@
                     waiting_host: '等待房主开始',
                     next_round: '下一局',
                     rules: '规则与牌型',
+                    reset_view: '恢复视角',
                     light_mode: '明亮模式',
                     night_mode: '夜间模式',
                     final_standings: '最终结算',
@@ -603,6 +660,9 @@
                     ,
                     history_hide: '收起',
                     history_show: '展开'
+                    ,
+                    hud_hide: '收起',
+                    hud_show: '展开'
                 }
             };
             return (dict[UI_LANG] && dict[UI_LANG][key]) || (dict.en[key] || key);
@@ -735,15 +795,9 @@
                 const decorHint = document.getElementById('decor-hint');
                 const decorBtn = document.getElementById('decor-apply');
                 const decorSel = document.getElementById('decor-select');
-                const decorCollapseBtn = document.getElementById('decor-collapse');
                 if (decorTitle) decorTitle.innerText = t('decor_title');
                 if (decorHint) decorHint.innerText = t('decor_hint');
                 if (decorBtn) decorBtn.innerText = t('decor_apply');
-                if (decorCollapseBtn) {
-                    const panel = document.getElementById('decor-panel');
-                    const collapsed = !!panel && panel.classList.contains('collapsed');
-                    decorCollapseBtn.innerText = collapsed ? t('decor_show') : t('decor_hide');
-                }
                 if (decorSel) {
                     const setOpt = (val, label) => {
                         const opt = decorSel.querySelector(`option[value="${val}"]`);
@@ -767,9 +821,22 @@
                 }
             } catch (_) {}
 
+            // HUD panel collapse button (desktop + mobile)
+            try {
+                const hudBtn = document.getElementById('hud-collapse');
+                const hud = document.getElementById('hud-panel');
+                if (hudBtn && hud) {
+                    const collapsed = hud.classList.contains('collapsed');
+                    hudBtn.innerText = collapsed ? t('hud_show') : t('hud_hide');
+                }
+            } catch (_) {}
+
             // Rules button
             const rulesBtn = document.getElementById('rules-btn');
             if (rulesBtn) rulesBtn.innerText = t('rules');
+
+            const resetBtn = document.getElementById('reset-view');
+            if (resetBtn) resetBtn.innerText = t('reset_view');
 
             // In-game language button label (keeps old id)
             const langBtn = document.getElementById('lang-toggle');
@@ -846,7 +913,9 @@
 
         function applyMobileIconButtons() {
             const isMobile = () => window.innerWidth <= 600;
-            const mobile = isMobile();
+            const hud = document.getElementById('hud-panel');
+            const hudCollapsed = !!hud && hud.classList.contains('collapsed');
+            const mobile = isMobile() || hudCollapsed;
             const setIconBtn = (id, icon, label) => {
                 const el = document.getElementById(id);
                 if (!el) return;
@@ -873,17 +942,22 @@
 
             // Left panel buttons
             setIconBtn('rules-btn', '?', t('rules'));
+            setIconBtn('reset-view', '⟲', t('reset_view'));
             setIconBtn('theme-toggle', themeIcon, themeLabel);
-            setIconBtn('bgm-toggle', '♫', 'BGM');
-            setIconBtn('sfx-toggle', '🔊', 'SFX');
-            setIconBtn('lang-toggle', '🌐', t('lang_label'));
+            // Swap icons: music box vs sfx (user preference)
+            setIconBtn('bgm-toggle', '🔊', 'BGM');
+            setIconBtn('sfx-toggle', '♫', 'SFX');
+            // Use stable text icon for language (some phones render 🌐 poorly / blank)
+            setIconBtn('lang-toggle', (UI_LANG === 'zh') ? '中' : 'EN', t('lang_label'));
+            setIconBtn('lang-toggle-lobby', (UI_LANG === 'zh') ? '中' : 'EN', t('lang_label_lobby'));
             setIconBtn('mic-toggle', '🎙', 'Mic');
+            // HUD collapse control (arrow)
+            setIconBtn('hud-collapse', hudCollapsed ? '▸' : '▾', hudCollapsed ? t('hud_show') : t('hud_hide'));
 
-            // Seat selection: decor collapse
+            // When HUD is collapsed, keep the buttons truly "small" so the row stays horizontal.
             try {
-                const dp = document.getElementById('decor-panel');
-                const collapsed = !!dp && dp.classList.contains('collapsed');
-                setIconBtn('decor-collapse', collapsed ? '▸' : '▾', collapsed ? t('decor_show') : t('decor_hide'));
+                const hb = document.getElementById('hud-buttons');
+                if (hb) hb.style.flexWrap = hudCollapsed ? 'nowrap' : 'wrap';
             } catch (_) {}
 
             // Activity panel collapse
@@ -2067,7 +2141,7 @@
             scene.background = new THREE.Color(0x080401);
             scene.fog = new THREE.FogExp2(0x080401, 0.02);
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 11, 15);
+            camera.position.copy(DEFAULT_VIEW.cameraPos);
             camera.lookAt(0, 0, 0);
             // alpha:true so light-mode can show the CSS casino background behind the 3D scene
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -2083,6 +2157,7 @@
             document.getElementById('container').appendChild(renderer.domElement);
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
+            try { controls.target.copy(DEFAULT_VIEW.target); } catch (_) {}
             cardsGroup = new THREE.Group();
             chipsGroup = new THREE.Group();
             tableGroup = new THREE.Group();
@@ -2995,6 +3070,7 @@
             });
             return g;
         }
+
 
         function updatePlayerDecorMesh(player) {
             if (!player) return;
@@ -3986,22 +4062,6 @@
                 const panel = document.getElementById('decor-panel');
                 const sel = document.getElementById('decor-select');
                 const btn = document.getElementById('decor-apply');
-                const collapseBtn = document.getElementById('decor-collapse');
-
-                const isMobile = () => window.innerWidth <= 600;
-                const applyCollapsed = (collapsed) => {
-                    if (!panel) return;
-                    panel.classList.toggle('collapsed', !!collapsed);
-                    try { localStorage.setItem('nebula_decor_collapsed', collapsed ? '1' : '0'); } catch (_) {}
-                    try { applyLanguageToUI(); } catch (_) {}
-                };
-                // default: collapsed on mobile (but remember preference)
-                try {
-                    const saved = localStorage.getItem('nebula_decor_collapsed');
-                    if (saved === null && isMobile()) applyCollapsed(true);
-                    else if (saved === '1') applyCollapsed(true);
-                    else if (saved === '0') applyCollapsed(false);
-                } catch (_) {}
 
                 const updatePanel = () => {
                     if (!panel) return;
@@ -4011,11 +4071,6 @@
                     const seatIdx = IS_MULTIPLAYER ? mySeatIdx : gameState.myPlayerIdx;
                     const current = IS_MULTIPLAYER ? (gameState.seatMeta?.[seatIdx]?.decor || 'none') : (seatDecor[seatIdx] || 'none');
                     sel.value = current;
-                    // If user resized into mobile and hasn't set preference, keep it collapsed by default
-                    try {
-                        const saved = localStorage.getItem('nebula_decor_collapsed');
-                        if (saved === null && isMobile()) panel.classList.add('collapsed');
-                    } catch (_) {}
                 };
                 updatePanel();
                 // called from multiple places
@@ -4038,12 +4093,6 @@
                             }
                         }
                         addToHistory(`${t('decor_set')} ${trDecorChoice(choice)}`);
-                    };
-                }
-                if (collapseBtn && panel) {
-                    collapseBtn.onclick = (e) => {
-                        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
-                        applyCollapsed(!panel.classList.contains('collapsed'));
                     };
                 }
             } catch (_) {}
@@ -4070,6 +4119,30 @@
                     histBtn.onclick = (e) => {
                         try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
                         applyHistCollapsed(!histPanel.classList.contains('collapsed'));
+                    };
+                }
+            } catch (_) {}
+
+            // HUD panel collapse (desktop "icon column" like mobile)
+            try {
+                const hud = document.getElementById('hud-panel');
+                const hudBtn = document.getElementById('hud-collapse');
+                const applyHudCollapsed = (collapsed) => {
+                    if (!hud) return;
+                    hud.classList.toggle('collapsed', !!collapsed);
+                    try { localStorage.setItem('nebula_hud_collapsed', collapsed ? '1' : '0'); } catch (_) {}
+                    try { applyLanguageToUI(); } catch (_) {}
+                    try { applyMobileIconButtons(); } catch (_) {}
+                };
+                try {
+                    const saved = localStorage.getItem('nebula_hud_collapsed');
+                    if (saved === '1') applyHudCollapsed(true);
+                    else if (saved === '0') applyHudCollapsed(false);
+                } catch (_) {}
+                if (hudBtn && hud) {
+                    hudBtn.onclick = (e) => {
+                        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+                        applyHudCollapsed(!hud.classList.contains('collapsed'));
                     };
                 }
             } catch (_) {}
@@ -4146,6 +4219,59 @@
                 // attempt autoplay on load (default ON)
                 if (saved === 'on') {
                     setTimeout(() => { tryAutoPlay(); }, 0);
+                }
+            } catch (_) {}
+
+            // Reset view (camera + orbit target)
+            try {
+                const resetBtn = document.getElementById('reset-view');
+                if (resetBtn) {
+                    resetBtn.onclick = () => {
+                        try {
+                            if (!camera) return;
+                            camera.fov = DEFAULT_VIEW.fov;
+                            camera.updateProjectionMatrix();
+                            camera.position.copy(DEFAULT_VIEW.cameraPos);
+                            camera.lookAt(DEFAULT_VIEW.target);
+                            if (controls) {
+                                controls.target.copy(DEFAULT_VIEW.target);
+                                controls.update();
+                            }
+                        } catch (_) {}
+                    };
+                }
+            } catch (_) {}
+
+            // Desktop: persist HUD panel size (so resizing "sticks")
+            try {
+                const hud = document.getElementById('hud-panel');
+                if (hud) {
+                    const kW = 'nebula_hud_w';
+                    const kH = 'nebula_hud_h';
+                    const savedW = Number(localStorage.getItem(kW) || '');
+                    const savedH = Number(localStorage.getItem(kH) || '');
+                    if (Number.isFinite(savedW) && savedW > 180) hud.style.width = `${savedW}px`;
+                    if (Number.isFinite(savedH) && savedH > 120) hud.style.height = `${savedH}px`;
+
+                    let t = null;
+                    const save = () => {
+                        try {
+                            const r = hud.getBoundingClientRect();
+                            localStorage.setItem(kW, String(Math.round(r.width)));
+                            localStorage.setItem(kH, String(Math.round(r.height)));
+                        } catch (_) {}
+                    };
+                    // ResizeObserver gives best results; fallback to mouseup
+                    if (window.ResizeObserver) {
+                        const ro = new ResizeObserver(() => {
+                            clearTimeout(t);
+                            t = setTimeout(save, 120);
+                        });
+                        ro.observe(hud);
+                    } else {
+                        hud.addEventListener('mouseup', save);
+                        hud.addEventListener('touchend', save);
+                    }
                 }
             } catch (_) {}
 
@@ -4368,14 +4494,29 @@
             };
 
             // Rules Modal Events
-            // Re-anchor rules panel under the Rules button (inside the same UI panel)
             const rulesBtn = document.getElementById('rules-btn');
             const rulesModal = document.getElementById('rules-modal');
-            const rulesAnchor = document.getElementById('rules-modal-anchor');
-            if (rulesAnchor && rulesModal) rulesAnchor.appendChild(rulesModal);
+            const positionRulesModal = () => {
+                if (!rulesBtn || !rulesModal) return;
+                const r = rulesBtn.getBoundingClientRect();
+                const margin = 8;
+                const vw = window.innerWidth || document.documentElement.clientWidth || 800;
+                const vh = window.innerHeight || document.documentElement.clientHeight || 600;
+                const w = Math.min(330, vw - 20);
+                rulesModal.style.width = `${w}px`;
+                let left = Math.max(10, Math.min(vw - w - 10, r.left));
+                let top = r.bottom + margin;
+                // if too low, flip above
+                const estH = Math.min(420, vh * 0.55);
+                if (top + estH > vh - 10) top = Math.max(10, r.top - margin - estH);
+                rulesModal.style.left = `${left}px`;
+                rulesModal.style.top = `${top}px`;
+            };
 
             rulesBtn.onclick = () => {
-                rulesModal.style.display = (rulesModal.style.display === 'block') ? 'none' : 'block';
+                const next = (rulesModal.style.display === 'block') ? 'none' : 'block';
+                rulesModal.style.display = next;
+                if (next === 'block') positionRulesModal();
             };
             document.getElementById('close-rules').onclick = () => { rulesModal.style.display = 'none'; };
             // 点击其它区域关闭（但在面板内部点击不关）
@@ -4386,6 +4527,7 @@
                 if (rulesModal.contains(target) || rulesBtn.contains(target)) return;
                 rulesModal.style.display = 'none';
             });
+            window.addEventListener('resize', () => { if (rulesModal?.style?.display === 'block') positionRulesModal(); });
 
             // Theme toggle (Night / Light)
             const themeBtn = document.getElementById('theme-toggle');
@@ -4402,11 +4544,13 @@
                         scene.background = null;
                         scene.fog = new THREE.FogExp2(0xfff0db, 0.016);
                         if (renderer) renderer.setClearColor(0x000000, 0);
+                        try { if (renderer?.domElement) renderer.domElement.style.background = 'transparent'; } catch (_) {}
                         if (starField) starField.visible = false;
                     } else {
                         scene.background = new THREE.Color(0x080401);
                         scene.fog = new THREE.FogExp2(0x080401, 0.02);
                         if (renderer) renderer.setClearColor(0x000000, 1);
+                        try { if (renderer?.domElement) renderer.domElement.style.background = ''; } catch (_) {}
                         if (starField) starField.visible = true;
                     }
                 }
