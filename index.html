@@ -118,9 +118,10 @@
         #close-rules { float: right; cursor: pointer; color: var(--accent); font-size: 20px; }
 
         #history-panel { position: absolute; right: 20px; top: 20px; width: 280px; max-height: 40vh; overflow-y: auto; z-index: 10; }
-        /* Desktop: allow Activity panel to collapse (Hide/Show) */
+        /* Desktop: allow Activity panel to collapse into a minimal icon-only chip (like mobile) */
         #history-panel.collapsed #history-list { display: none; }
-        #history-panel.collapsed { width: 180px; max-height: none; }
+        #history-panel.collapsed h3 { display: none; }
+        #history-panel.collapsed { width: 44px; max-height: none; padding: 10px 8px; overflow: visible; }
         #controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 10; align-items: center; }
         
         .touch-btn { 
@@ -151,30 +152,28 @@
             line-height: 1;
         }
 
-        /* HUD panel collapsed => compact: show game-msg + horizontal icon row */
+        /* HUD panel collapsed => minimal vertical icon column (like mobile) */
         #hud-panel.collapsed {
-            width: 270px;
-            min-width: 220px;
-            max-width: 320px;
-            padding: 10px;
+            width: 56px;
+            min-width: 56px;
+            max-width: 56px;
+            padding: 10px 8px;
             resize: none;
             overflow: visible;
         }
+        #hud-panel.collapsed #game-msg,
         #hud-panel.collapsed #pot-row,
-        #hud-panel.collapsed #voice-status {
+        #hud-panel.collapsed #voice-status,
+        #hud-panel.collapsed #rules-modal {
             display: none !important;
         }
         #hud-panel.collapsed #hud-buttons {
             display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
+            flex-direction: column;
             gap: 8px;
-            justify-content: flex-start;
-            align-items: center;
             margin-top: 10px;
         }
         #hud-panel.collapsed #hud-buttons .touch-btn { margin-top: 0 !important; }
-        #hud-panel.collapsed #game-msg { font-size: 0.95em; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.18); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.12); }
         .adjust-btn { background: none; border: none; color: var(--accent); font-size: 20px; cursor: pointer; font-weight: bold; width: 30px; }
@@ -210,6 +209,8 @@
                 gap: 10px;
             }
             .seat-box { padding: 10px; }
+            /* Make both columns visually balanced */
+            .seat-box { min-height: 190px; display: flex; flex-direction: column; justify-content: space-between; }
             .seat-action-btn { padding: 8px; font-size: 0.78em; }
 
             /* Start Game pinned to the bottom of seat selection (sticky) */
@@ -258,6 +259,10 @@
             }
             #history-panel #history-list { max-height: 20vh; overflow-y: auto; font-size: 0.72em; line-height: 1.35; }
             #history-panel.collapsed #history-list { display: none; }
+            /* Minimal activity when collapsed: icon only (no "ACTIVITY" text) */
+            #history-panel.collapsed { width: 44px; max-height: none; padding: 8px; }
+            #history-panel.collapsed h3 { display: none; }
+            #history-panel.collapsed #history-collapse { width: 32px !important; height: 32px !important; }
             #controls {
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
                 width: calc(100vw - 14px);
@@ -915,10 +920,42 @@
             const isMobile = () => window.innerWidth <= 600;
             const hud = document.getElementById('hud-panel');
             const hudCollapsed = !!hud && hud.classList.contains('collapsed');
-            const mobile = isMobile() || hudCollapsed;
+            const hist = document.getElementById('history-panel');
+            const histCollapsed = !!hist && hist.classList.contains('collapsed');
+            const mobile = isMobile() || hudCollapsed || histCollapsed;
             const setIconBtn = (id, icon, label) => {
                 const el = document.getElementById(id);
                 if (!el) return;
+                // Lobby language toggle should always stay full-size (desktop + mobile).
+                if (id === 'lang-toggle-lobby') {
+                    el.classList.remove('icon-btn');
+                    el.removeAttribute('data-icon');
+                    if (label) {
+                        el.setAttribute('title', String(label));
+                        el.setAttribute('aria-label', String(label));
+                    }
+                    return;
+                }
+                // Mobile in-game language toggle should stay full-size (user request)
+                if (isMobile() && id === 'lang-toggle') {
+                    el.classList.remove('icon-btn');
+                    el.removeAttribute('data-icon');
+                    if (label) {
+                        el.setAttribute('title', String(label));
+                        el.setAttribute('aria-label', String(label));
+                    }
+                    return;
+                }
+                // Desktop: when Activity is collapsed, make the collapse control icon-only too.
+                if (!isMobile() && id === 'history-collapse' && histCollapsed) {
+                    el.classList.add('icon-btn');
+                    el.setAttribute('data-icon', String(icon || '•'));
+                    if (label) {
+                        el.setAttribute('title', String(label));
+                        el.setAttribute('aria-label', String(label));
+                    }
+                    return;
+                }
                 if (mobile) {
                     el.classList.add('icon-btn');
                     el.setAttribute('data-icon', String(icon || '•'));
@@ -954,10 +991,20 @@
             // HUD collapse control (arrow)
             setIconBtn('hud-collapse', hudCollapsed ? '▸' : '▾', hudCollapsed ? t('hud_show') : t('hud_hide'));
 
-            // When HUD is collapsed, keep the buttons truly "small" so the row stays horizontal.
+            // In icon mode (mobile or collapsed), keep HUD buttons vertical to save width.
             try {
                 const hb = document.getElementById('hud-buttons');
-                if (hb) hb.style.flexWrap = hudCollapsed ? 'nowrap' : 'wrap';
+                if (hb) {
+                    if (mobile) {
+                        hb.style.flexDirection = 'column';
+                        hb.style.flexWrap = 'nowrap';
+                        hb.style.gap = '8px';
+                    } else {
+                        hb.style.flexDirection = 'column';
+                        hb.style.flexWrap = 'nowrap';
+                        hb.style.gap = '10px';
+                    }
+                }
             } catch (_) {}
 
             // Activity panel collapse
@@ -1786,17 +1833,17 @@
                     const callPay = Math.max(0, Math.min(toCall, myChips));
                     if (btnCheck) {
                         btnCheck.innerText = (toCall > 0)
-                            ? `Call $${callPay}${(myChips > 0 && myChips < toCall) ? ' (All-in)' : ''}`
-                            : 'Check';
+                            ? `${t('btn_call')} $${callPay}${(myChips > 0 && myChips < toCall) ? ` (${t('btn_allin')})` : ''}`
+                            : t('btn_check');
                         btnCheck.style.display = 'block';
                     }
                     const btnRaise = document.getElementById('btn-raise');
                     if (btnRaise) {
                         if (toCall > 0) {
-                            btnRaise.innerText = `Raise +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
+                            btnRaise.innerText = `${t('btn_raise')} +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
                         } else {
                             const betAmt = Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0) || 0);
-                            btnRaise.innerText = `Bet $${betAmt}`;
+                            btnRaise.innerText = `${t('btn_bet')} $${betAmt}`;
                         }
                     }
                 } catch (_) {}
@@ -4305,6 +4352,7 @@
                         localStorage.setItem('nebula_lang', UI_LANG);
                         applyLang();
                         applyLanguageToUI();
+                        try { updateUI(); } catch (_) {}
                     };
                 }
             } catch (_) {}
@@ -4317,6 +4365,7 @@
                         UI_LANG = (UI_LANG === 'en') ? 'zh' : 'en';
                         localStorage.setItem('nebula_lang', UI_LANG);
                         applyLanguageToUI();
+                        try { updateUI(); } catch (_) {}
                     };
                 }
             } catch (_) {}
