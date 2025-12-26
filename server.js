@@ -38,6 +38,19 @@ app.use(express.static(__dirname));
 /** @type {Map<string, Room>} */
 const rooms = new Map();
 
+// Auto release rooms after 3 hours with no connected sockets
+setInterval(() => {
+  const ttlMs = 3 * 60 * 60 * 1000;
+  const ts = now();
+  for (const room of rooms.values()) {
+    if (room.closing) continue;
+    if (!room.emptySince) continue;
+    if (ts - room.emptySince > ttlMs) {
+      try { rooms.delete(room.roomId); } catch (_) {}
+    }
+  }
+}, 10 * 60 * 1000);
+
 function now() {
   return Date.now();
 }
@@ -71,6 +84,9 @@ function makeRoom(roomId) {
   const room = {
     roomId,
     createdAt: now(),
+    lastActiveAt: now(),
+    emptySince: now(),
+    socketIds: new Set(),
     hostSocketId: null,
     seats: Array.from({ length: SEATS }, () => null),
     started: false,
@@ -211,7 +227,8 @@ function isSeatEligible(room, seatIdx) {
   if (!seat) return false;
   const p = getPlayer(room, seatIdx);
   if (!p) return false;
-  return !p.isBankrupt && p.chips > 0;
+  const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
+  return !p.isBankrupt && p.chips > 0 && !sitOut;
 }
 
 function getInHandSeats(room) {
@@ -221,7 +238,8 @@ function getInHandSeats(room) {
     if (!seat) continue;
     const p = getPlayer(room, i);
     if (!p) continue;
-    if (!p.isFolded && !p.isBankrupt) out.push(i);
+    const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
+    if (!p.isFolded && !p.isBankrupt && !sitOut) out.push(i);
   }
   return out;
 }
@@ -233,7 +251,8 @@ function getActableSeats(room) {
     if (!seat) continue;
     const p = getPlayer(room, i);
     if (!p) continue;
-    if (!p.isFolded && !p.isBankrupt && p.chips > 0) out.push(i);
+    const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
+    if (!p.isFolded && !p.isBankrupt && p.chips > 0 && !sitOut) out.push(i);
   }
   return out;
 }
@@ -420,7 +439,8 @@ function resetHand(room) {
   for (const [seatIdx, p] of room.players.entries()) {
     p.hand = [];
     p.currentBet = 0;
-    p.isFolded = p.chips <= 0;
+    const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
+    p.isFolded = p.chips <= 0 || sitOut;
     p.isBankrupt = p.chips <= 0;
   }
 }
@@ -438,7 +458,8 @@ function ensurePlayersMap(room) {
         isBankrupt: false,
         hand: [],
         totalBuyIn: Number.isFinite(room.initialChips) ? room.initialChips : 1000,
-        pendingRebuy: 0
+        pendingRebuy: 0,
+        sitOutUntilHand: 0
       });
     }
   }
@@ -446,6 +467,7 @@ function ensurePlayersMap(room) {
   for (const p of room.players.values()) {
     if (!Number.isFinite(p.totalBuyIn)) p.totalBuyIn = Number.isFinite(room.initialChips) ? room.initialChips : 1000;
     if (!Number.isFinite(p.pendingRebuy)) p.pendingRebuy = 0;
+    if (!Number.isFinite(p.sitOutUntilHand)) p.sitOutUntilHand = 0;
   }
   // Remove players for emptied seats
   for (const seatIdx of [...room.players.keys()]) {
@@ -888,6 +910,7 @@ io.on("connection", (socket) => {
   socket.data.roomId = null;
   socket.data.seatIdx = null;
   socket.data.name = null;
+  socket.data.clientId = null;
   socket.data.voiceJoined = false;
 
   function emitYouState(room) {
@@ -899,9 +922,10 @@ io.on("connection", (socket) => {
     });
   }
 
-  socket.on("join_room", ({ roomId, name }) => {
+  socket.on("join_room", ({ roomId, name, clientId }) => {
     const rid = String(roomId || "").trim();
     const nm = String(name || "").trim() || "Player";
+    const cid = String(clientId || "").trim();
     if (!rid) return;
 
     let room = rooms.get(rid);
@@ -909,14 +933,39 @@ io.on("connection", (socket) => {
       room = makeRoom(rid);
       rooms.set(rid, room);
     }
+    room.lastActiveAt = now();
     if (room.closing) {
       socket.emit("error_msg", { msg: "This room has ended and is closing. Please rejoin in a moment (or use a new Room ID)." });
       return;
     }
-    // If a match is already running in this room, do not allow new joins.
+    socket.data.clientId = cid || socket.data.clientId;
+
+    // If match is running: allow ONLY reconnect to an existing disconnected seat (by clientId or by name fallback).
     if (room.started) {
-      socket.emit("error_msg", { msg: "Game already started in this room. Please wait for it to finish or use a new Room ID." });
-      return;
+      let reconnectSeatIdx = null;
+      for (let i = 0; i < SEATS; i++) {
+        const s = room.seats[i];
+        if (!s || s.type !== "player") continue;
+        if (cid && s.clientId && s.clientId === cid) { reconnectSeatIdx = i; break; }
+      }
+      if (reconnectSeatIdx === null) {
+        // fallback: same nickname can reclaim if seat is disconnected
+        for (let i = 0; i < SEATS; i++) {
+          const s = room.seats[i];
+          if (!s || s.type !== "player") continue;
+          if (String(s.name || "") === nm && (!s.socketId || !io.sockets.sockets.has(s.socketId))) { reconnectSeatIdx = i; break; }
+        }
+      }
+      if (reconnectSeatIdx === null) {
+        socket.emit("error_msg", { msg: "Game already started in this room. You can only rejoin if you were already seated." });
+        return;
+      }
+      // Rebind seat
+      room.seats[reconnectSeatIdx].socketId = socket.id;
+      room.seats[reconnectSeatIdx].name = nm;
+      if (cid) room.seats[reconnectSeatIdx].clientId = cid;
+      room.seats[reconnectSeatIdx].disconnectedAt = null;
+      socket.data.seatIdx = reconnectSeatIdx;
     }
     // host 选举：如果没有 host 或 host socket 已不在线，则把当前加入者设为 host
     const hostOnline = room.hostSocketId && io.sockets.sockets.has(room.hostSocketId);
@@ -925,6 +974,8 @@ io.on("connection", (socket) => {
     socket.join(rid);
     socket.data.roomId = rid;
     socket.data.name = nm;
+    room.socketIds.add(socket.id);
+    room.emptySince = null;
 
     socket.emit("room_state", getRoomSummary(room, socket.id));
     emitYouState(room);
@@ -981,7 +1032,24 @@ io.on("connection", (socket) => {
     const rid = socket.data.roomId;
     if (!rid) return;
     const room = rooms.get(rid);
-    if (!room || room.started || room.closing) return;
+    if (!room || room.closing) return;
+    // Allow reconnecting players to reclaim seat during started game only if seat reserved for them.
+    if (room.started) {
+      const idx = Number(seatIdx);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
+      const seat = room.seats[idx];
+      if (!seat || seat.type !== "player") return;
+      const cid = socket.data.clientId;
+      const canReclaim = (cid && seat.clientId && seat.clientId === cid) || (String(seat.name || "") === String(socket.data.name || ""));
+      if (!canReclaim) return;
+      seat.socketId = socket.id;
+      seat.disconnectedAt = null;
+      socket.data.seatIdx = idx;
+      emitYouState(room);
+      broadcastRoom(room);
+      broadcastGame(room);
+      return;
+    }
 
     const idx = Number(seatIdx);
     if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
@@ -993,7 +1061,7 @@ io.on("connection", (socket) => {
       if (s && s.type === "player" && s.socketId === socket.id) room.seats[i] = null;
     }
 
-    room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player" };
+    room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player", clientId: socket.data.clientId || null, disconnectedAt: null };
     socket.data.seatIdx = idx;
     socket.emit("seat_taken", { seatIdx: idx });
     emitYouState(room);
@@ -1030,21 +1098,56 @@ io.on("connection", (socket) => {
     const room = rooms.get(rid);
     if (!room) return;
     if (socket.id !== room.hostSocketId) return;
-    if (room.started || room.closing) return; // 只允许在等待/选座阶段踢人
+    if (room.closing) return;
 
     const idx = Number(seatIdx);
     if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
     const seat = room.seats[idx];
     if (!seat || seat.type !== "player") return;
 
-    // 通知被踢的人（如果还在线）
+    room.lastActiveAt = now();
+
+    if (room.started) {
+      // In-game kick: force fold now and sit-out until next hand, but keep seat reserved for reconnection.
+      const p = getPlayer(room, idx);
+      if (p) {
+        p.isFolded = true;
+        p.currentBet = p.currentBet || 0;
+        p.sitOutUntilHand = (room.handNum || 0) + 1;
+      }
+      room.pendingActionSeats.delete(idx);
+      if (seat.socketId && io.sockets.sockets.has(seat.socketId)) {
+        io.to(seat.socketId).emit("kicked_in_hand", { seatIdx: idx, msg: "You were removed from this hand by host. You can rejoin next hand." });
+      }
+      broadcastActivity(room, `${seat.name} was removed by host (sit out until next hand).`);
+      broadcastPlayerAction(room, idx, "FOLD");
+
+      const inHand = getInHandSeats(room);
+      if (inHand.length <= 1) {
+        finishHand(room);
+        return;
+      }
+      removeIneligibleFromPending(room);
+      if (room.activeSeatIdx === idx) {
+        const next = chooseNextActor(room, idx);
+        room.activeSeatIdx = next;
+      }
+      if (canAdvanceStreet(room)) {
+        proceedToNextStreet(room);
+      } else {
+        requestTurn(room);
+      }
+      broadcastRoom(room);
+      broadcastGame(room);
+      return;
+    }
+
+    // Waiting/seat-selection kick: remove seat entirely
     if (seat.socketId && io.sockets.sockets.has(seat.socketId)) {
       io.to(seat.socketId).emit("kicked", { seatIdx: idx });
     }
-
     room.seats[idx] = null;
     room.players.delete(idx);
-
     broadcastRoom(room);
     broadcastGame(room);
   });
@@ -1216,6 +1319,8 @@ io.on("connection", (socket) => {
     if (!rid) return;
     const room = rooms.get(rid);
     if (!room) return;
+    room.socketIds.delete(socket.id);
+    if (room.socketIds.size === 0) room.emptySince = now();
 
     // match-over ack set maintenance
     if (room.closing && room.expectedAcks?.has(socket.id)) {
@@ -1234,18 +1339,29 @@ io.on("connection", (socket) => {
       socket.to(rid).emit("voice_peer_left", { socketId: socket.id });
     }
 
-    // free seat
+    // seat disconnect: during started game keep seat reserved for reconnect; otherwise free seat
     for (let i = 0; i < SEATS; i++) {
       const s = room.seats[i];
       if (s && s.type === "player" && s.socketId === socket.id) {
-        room.seats[i] = null;
-        room.players.delete(i);
+        if (room.started) {
+          s.socketId = null;
+          s.disconnectedAt = now();
+          // prevent stalling: treat as folded for this hand
+          const p = getPlayer(room, i);
+          if (p) {
+            p.isFolded = true;
+            room.pendingActionSeats.delete(i);
+          }
+        } else {
+          room.seats[i] = null;
+          room.players.delete(i);
+        }
       }
     }
 
     // host migration
     if (room.hostSocketId === socket.id) {
-      const nextHost = room.seats.find((s) => s && s.type === "player");
+      const nextHost = room.seats.find((s) => s && s.type === "player" && s.socketId && io.sockets.sockets.has(s.socketId));
       room.hostSocketId = nextHost ? nextHost.socketId : null;
     }
 

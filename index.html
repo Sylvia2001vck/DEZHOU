@@ -19,26 +19,36 @@
             --btn-hover-shadow: rgba(212, 175, 55, 0.3);
         }
         [data-theme="light"] {
-            /* PokerNow-like "classic" UI: clean white/gray panels + red/black cards */
-            --bg: #f4f6f8;
-            --text: #101418;
-            --panel-bg: rgba(255, 255, 255, 0.92);
-            --panel-border: rgba(16, 20, 24, 0.12);
-            --btn-bg: rgba(255, 255, 255, 0.96);
-            --btn-border: rgba(16, 20, 24, 0.18);
-            --btn-text: #101418;
-            --accent: #1b8a3a;
-            --rules-bg: rgba(255, 255, 255, 0.96);
-            --btn-hover-bg: rgba(16, 20, 24, 0.06);
-            --btn-hover-shadow: rgba(16, 20, 24, 0.10);
+            /* Light mode: calm darker wood background (less glare), warm readable panels */
+            --bg: #5a3f2a;
+            --text: #2a1a06;
+            --panel-bg: rgba(255, 244, 228, 0.82);
+            --panel-border: rgba(70, 40, 10, 0.22);
+            --btn-bg: rgba(255, 248, 236, 0.90);
+            --btn-border: rgba(70, 40, 10, 0.26);
+            --btn-text: #2a1a06;
+            --accent: #b07d10;
+            --rules-bg: rgba(255, 246, 232, 0.94);
+            --btn-hover-bg: rgba(120, 70, 25, 0.10);
+            --btn-hover-shadow: rgba(40, 20, 5, 0.18);
         }
 
         body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); }
         /* Classic clean background for light mode */
         [data-theme="light"] body {
             background-color: var(--bg);
-            background-image: radial-gradient(900px 600px at 30% 20%, rgba(255,255,255,0.9), rgba(255,255,255,0.0) 60%),
-                              radial-gradient(900px 600px at 80% 60%, rgba(255,255,255,0.8), rgba(255,255,255,0.0) 60%);
+            background-image:
+                /* soft vignette */
+                radial-gradient(1200px 900px at 20% 10%, rgba(255, 210, 140, 0.12), rgba(0,0,0,0.0) 62%),
+                radial-gradient(1000px 900px at 85% 30%, rgba(255, 200, 120, 0.10), rgba(0,0,0,0.0) 62%),
+                /* wood grain lines */
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 2px, rgba(0,0,0,0.0) 2px 16px),
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 1px, rgba(0,0,0,0.0) 1px 18px),
+                repeating-linear-gradient(88deg, rgba(255,255,255,0.022) 0 1px, rgba(0,0,0,0.0) 1px 22px),
+                repeating-linear-gradient(92deg, rgba(0,0,0,0.030) 0 1px, rgba(0,0,0,0.0) 1px 26px),
+                /* base */
+                linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.18));
+            background-blend-mode: screen, screen, overlay, overlay, overlay, overlay, normal;
         }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
@@ -72,7 +82,10 @@
         #rules-btn { position: relative; z-index: 20; background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
         #rules-btn:hover { background: var(--btn-hover-bg); box-shadow: 0 0 15px var(--btn-hover-shadow); }
         /* Rules panel: appears directly under the Rules button (inside the ui panel) */
-        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.35); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: var(--text); box-shadow: 0 0 35px rgba(0,0,0,0.18); }
+        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.35); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: var(--text); box-shadow: 0 0 35px rgba(0,0,0,0.18); scrollbar-width: thin; }
+        #rules-modal::-webkit-scrollbar { width: 10px; }
+        #rules-modal::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.35); border-radius: 10px; border: 2px solid rgba(0,0,0,0.15); }
+        #rules-modal::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 10px; }
         #rules-modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
         #rules-modal ul { list-style: none; padding: 0; }
         #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
@@ -123,29 +136,30 @@
 <body>
     <div id="lobby-overlay">
         <div class="lobby-panel">
-            <h1 style="color: gold; margin-bottom: 20px; font-size: 1.8em;">NEBULA POKER</h1>
+            <h1 id="lobby-title" style="color: gold; margin-bottom: 20px; font-size: 1.8em;">NEBULA POKER</h1>
             <div class="lobby-input-group">
-                <label class="lobby-label">YOUR NAME</label>
+                <label class="lobby-label" id="lbl-your-name">YOUR NAME</label>
                 <input type="text" id="username-input" class="lobby-input" placeholder="e.g. StarLord">
             </div>
             <div class="lobby-input-group">
-                <label class="lobby-label">ROOM ID</label>
+                <label class="lobby-label" id="lbl-room-id">ROOM ID</label>
                 <input type="text" id="room-id-input" class="lobby-input" placeholder="Room 101">
             </div>
             <div class="lobby-input-group">
-                <label class="lobby-label">INITIAL CHIPS (Min 1000, Multiples of 50)</label>
+                <label class="lobby-label" id="lbl-init-chips">INITIAL CHIPS (Min 1000, Multiples of 50)</label>
                 <input type="number" id="init-chips-input" class="lobby-input" value="1000" step="50" min="1000">
             </div>
             <div class="lobby-input-group" id="rounds-group">
-                <label class="lobby-label">TOTAL ROUNDS</label>
+                <label class="lobby-label" id="lbl-total-rounds">TOTAL ROUNDS</label>
                 <input type="number" id="total-rounds-input" class="lobby-input" value="5" min="1">
             </div>
             <button id="lobby-next-btn" class="lobby-btn">Continue to Select Seat</button>
+            <button id="lang-toggle-lobby" class="lobby-btn" style="margin-top:10px;">Language: EN</button>
         </div>
     </div>
 
     <div id="seat-overlay">
-        <h2 style="color: gold; text-align: center; margin-top: 50px;">SEAT SELECTION</h2>
+        <h2 id="seat-selection-title" style="color: gold; text-align: center; margin-top: 50px;">SEAT SELECTION</h2>
         <div class="seat-container">
             <div id="seat-grid" style="display: contents;"></div>
             <div class="start-game-area">
@@ -312,6 +326,19 @@
         const BUILD_TAG = `build-${new Date().toISOString()}`;
         const IS_MULTIPLAYER = (location.protocol !== 'file:') && (typeof window.io === 'function');
         const socket = IS_MULTIPLAYER ? window.io() : null;
+        const CLIENT_ID = (() => {
+            try {
+                const k = 'nebula_client_id';
+                let v = localStorage.getItem(k);
+                if (!v) {
+                    v = (crypto?.randomUUID?.() || `cid-${Math.random().toString(16).slice(2)}-${Date.now()}`);
+                    localStorage.setItem(k, v);
+                }
+                return v;
+            } catch (_) {
+                return `cid-${Math.random().toString(16).slice(2)}-${Date.now()}`;
+            }
+        })();
         let mpWired = false;
         let pendingJoin = false;
         let joinedRoomOnce = false;
@@ -329,30 +356,291 @@
         let opponentPlaceholderToken = 0;
         let lastOpponentPlaceholderHandNum = null;
         let UI_LANG = localStorage.getItem('nebula_lang') || 'en';
+        const activityRaw = [];
         function t(key) {
             const dict = {
                 en: {
                     lang_label: 'Language: EN',
+                    lang_label_lobby: 'Language: EN',
+                    lobby_continue: 'Continue to Select Seat',
+                    lobby_your_name: 'YOUR NAME',
+                    lobby_room_id: 'ROOM ID',
+                    lobby_init_chips: 'INITIAL CHIPS (Min 1000, Multiples of 50)',
+                    lobby_total_rounds: 'TOTAL ROUNDS',
+                    seat_selection: 'SEAT SELECTION',
+                    start_game: 'Start Game',
+                    waiting_host: 'Waiting for Host',
+                    next_round: 'Next Round',
+                    rules: 'Rules & Rankings',
+                    light_mode: 'Light Mode',
+                    night_mode: 'Night Mode',
                     final_standings: 'Final Standings',
                     hand_results: 'Hand Results',
                     buy_in: 'Buy-in',
                     chips: 'Chips',
                     net: 'Net',
                     win: 'Win',
-                    loss: 'Loss'
+                    loss: 'Loss',
+                    round_waiting: 'WAITING',
+                    round_preflop: 'PRE-FLOP',
+                    round_flop: 'FLOP',
+                    round_turn: 'TURN',
+                    round_river: 'RIVER',
+                    round_showdown: 'SHOWDOWN',
+                    round_hand_over: 'HAND OVER',
+                    spectator: 'Spectator (pick a seat before start)',
+                    btn_fold: 'Fold',
+                    btn_check: 'Check',
+                    btn_call: 'Call',
+                    btn_bet: 'Bet',
+                    btn_raise: 'Raise',
+                    btn_allin: 'All-in',
+                    btn_rebuy: 'Rebuy',
+                    btn_confirm_next: 'Confirm & Next Round',
+                    seat_empty: 'Empty',
+                    seat_take: 'Take Seat',
+                    seat_add_ai: 'Add AI',
+                    seat_remove_ai: 'Remove AI',
+                    seat_remove: 'Remove',
+                    seat_label: 'Seat',
+                    pot_label: 'Pot',
+                    acting_label: 'acting'
                 },
                 zh: {
                     lang_label: 'Language: 中文',
+                    lang_label_lobby: '语言：中文',
+                    lobby_continue: '继续进入选座',
+                    lobby_your_name: '你的昵称',
+                    lobby_room_id: '房间号',
+                    lobby_init_chips: '初始筹码（至少1000，50的倍数）',
+                    lobby_total_rounds: '总局数',
+                    seat_selection: '选择座位',
+                    start_game: '开始游戏',
+                    waiting_host: '等待房主开始',
+                    next_round: '下一局',
+                    rules: '规则与牌型',
+                    light_mode: '明亮模式',
+                    night_mode: '夜间模式',
                     final_standings: '最终结算',
                     hand_results: '每手结果',
                     buy_in: '本金',
                     chips: '剩余',
                     net: '净赢亏',
                     win: '赚',
-                    loss: '亏'
+                    loss: '亏',
+                    round_waiting: '等待中',
+                    round_preflop: '翻牌前',
+                    round_flop: '翻牌',
+                    round_turn: '转牌',
+                    round_river: '河牌',
+                    round_showdown: '摊牌',
+                    round_hand_over: '本局结束',
+                    spectator: '观战（请先入座）',
+                    btn_fold: '弃牌',
+                    btn_check: '过牌',
+                    btn_call: '跟注',
+                    btn_bet: '下注',
+                    btn_raise: '加注',
+                    btn_allin: '全下',
+                    btn_rebuy: '补码',
+                    btn_confirm_next: '确认并下一局',
+                    seat_empty: '空位',
+                    seat_take: '入座',
+                    seat_add_ai: '添加AI',
+                    seat_remove_ai: '移除AI',
+                    seat_remove: '移除',
+                    seat_label: '座位',
+                    pot_label: '牌池',
+                    acting_label: '行动中'
                 }
             };
             return (dict[UI_LANG] && dict[UI_LANG][key]) || (dict.en[key] || key);
+        }
+
+        function trRound(r) {
+            const rr = String(r || '').toUpperCase();
+            if (rr === 'WAITING') return t('round_waiting');
+            if (rr === 'PRE-FLOP' || rr === 'PREFLOP') return t('round_preflop');
+            if (rr === 'FLOP') return t('round_flop');
+            if (rr === 'TURN') return t('round_turn');
+            if (rr === 'RIVER') return t('round_river');
+            if (rr === 'SHOWDOWN') return t('round_showdown');
+            if (rr === 'HAND_OVER') return t('round_hand_over');
+            return r;
+        }
+
+        function trHandDesc(desc) {
+            const d = String(desc || '');
+            const map = {
+                'Royal Flush': '皇家同花顺',
+                'Straight Flush': '同花顺',
+                'Four of a Kind': '四条',
+                'Full House': '葫芦',
+                'Flush': '同花',
+                'Straight': '顺子',
+                'Three of a Kind': '三条',
+                'Two Pair': '两对',
+                'One Pair': '一对',
+                'High Card': '高牌',
+                'All others folded': '其余都弃牌',
+                'No active players': '无人可用'
+            };
+            return UI_LANG === 'zh' ? (map[d] || d) : d;
+        }
+
+        function translateActivity(msg) {
+            if (UI_LANG !== 'zh') return String(msg || '');
+            let out = String(msg || '');
+            if (out.startsWith('[DBG]')) return out;
+            if (out.startsWith('ERROR:')) return out;
+
+            out = out.replace(/---\s*HAND\s+(\d+)\s*\/\s*(\d+)\s*---/i, (_m, a, b) => `--- 第${a}局 / ${b} ---`);
+            out = out.replace(/---\s*HAND OVER\s+(\d+)\s*\/\s*(\d+)\s*:\s*(.*?)\s*\((.*?)\)\s*---/i,
+                (_m, a, b, name, desc) => `--- 本局结束 ${a}/${b}: ${name}（${trHandDesc(desc)}） ---`);
+
+            out = out.replace(/(.+?) posts SB \$(\d+)/i, (_m, name, amt) => `${name} 下小盲 $${amt}`);
+            out = out.replace(/(.+?) posts BB \$(\d+)/i, (_m, name, amt) => `${name} 下大盲 $${amt}`);
+
+            out = out.replace(/(.+?) Folds\./i, (_m, name) => `${name} 弃牌。`);
+            out = out.replace(/(.+?) Checks\./i, (_m, name) => `${name} 过牌。`);
+            out = out.replace(/(.+?) Calls\./i, (_m, name) => `${name} 跟注。`);
+            out = out.replace(/(.+?) Raises to (\d+)\./i, (_m, name, amt) => `${name} 加注到 $${amt}。`);
+            out = out.replace(/(.+?) ALL-IN to (\d+)\./i, (_m, name, amt) => `${name} 全下到 $${amt}。`);
+            out = out.replace(/(.+?) is ALL-IN!/i, (_m, name) => `${name} 全下！`);
+
+            out = out.replace(/You Folded\./i, '你弃牌。');
+            out = out.replace(/You Checked\./i, '你过牌。');
+            out = out.replace(/You Called \$(\d+)\./i, (_m, amt) => `你跟注 $${amt}。`);
+            out = out.replace(/You Raised \$(\d+) \(Total \$(\d+)\)\./i, (_m, inc, tot) => `你加注 $${inc}（总计 $${tot}）。`);
+            out = out.replace(/You Bet \$(\d+)\./i, (_m, amt) => `你下注 $${amt}。`);
+            out = out.replace(/YOU ALL-IN!!!/i, '你全下！！！');
+
+            out = out.replace(/Match over\./i, '比赛结束。');
+            out = out.replace(/Game Over\.\s*(.+?) wins \(all others folded\)!/i, (_m, name) => `游戏结束。${name} 获胜（其余都弃牌）！`);
+            out = out.replace(/Game Over\.\s*(.+?) wins with (.+?)!/i, (_m, name, desc) => `游戏结束。${name} 获胜（${trHandDesc(desc)}）！`);
+            out = out.replace(/Game Over\.\s*\(No active players\)/i, '游戏结束。（无人可用）');
+
+            // Rebuy
+            out = out.replace(/Rebuy: \$(\d+) \(applies next hand\)/i, (_m, amt) => `补码：$${amt}（下一局生效）`);
+            return out;
+        }
+
+        function rerenderHistory() {
+            const list = document.getElementById('history-list');
+            if (!list) return;
+            list.innerHTML = '';
+            for (const raw of activityRaw) {
+                const div = document.createElement('div');
+                div.innerHTML = `<span style="color:#d4af37;opacity:0.5">></span> ${translateActivity(raw)}`;
+                list.appendChild(div);
+            }
+        }
+
+        function setGameMsg(round, actorName, potValue, isSpectator) {
+            const el = document.getElementById('game-msg');
+            if (!el) return;
+            if (isSpectator) {
+                el.innerText = `${trRound(round)}: ${t('spectator')}`;
+                return;
+            }
+            const r = trRound(round);
+            const who = actorName ? `${actorName} ${t('acting_label')}` : '';
+            const pot = Number.isFinite(Number(potValue)) ? `${t('pot_label')}: ${Number(potValue)}` : '';
+            const joiner = UI_LANG === 'zh' ? '  ' : ' • ';
+            el.innerText = `${r}${who ? `: ${who}` : ''}${pot ? `${joiner}${pot}` : ''}`.trim();
+        }
+
+        function applyLanguageToUI() {
+            // Lobby
+            const lblName = document.getElementById('lbl-your-name');
+            const lblRoom = document.getElementById('lbl-room-id');
+            const lblInit = document.getElementById('lbl-init-chips');
+            const lblRounds = document.getElementById('lbl-total-rounds');
+            const btnLobbyNext = document.getElementById('lobby-next-btn');
+            const btnLangLobby = document.getElementById('lang-toggle-lobby');
+            if (lblName) lblName.innerText = t('lobby_your_name');
+            if (lblRoom) lblRoom.innerText = t('lobby_room_id');
+            if (lblInit) lblInit.innerText = t('lobby_init_chips');
+            if (lblRounds) lblRounds.innerText = t('lobby_total_rounds');
+            if (btnLobbyNext) btnLobbyNext.innerText = t('lobby_continue');
+            if (btnLangLobby) btnLangLobby.innerText = t('lang_label_lobby');
+
+            // Seat selection header
+            const seatTitle = document.getElementById('seat-selection-title');
+            if (seatTitle) seatTitle.innerText = t('seat_selection');
+
+            // Rules button
+            const rulesBtn = document.getElementById('rules-btn');
+            if (rulesBtn) rulesBtn.innerText = t('rules');
+
+            // In-game language button label (keeps old id)
+            const langBtn = document.getElementById('lang-toggle');
+            if (langBtn) langBtn.innerText = t('lang_label');
+
+            // Theme button label
+            const themeBtn = document.getElementById('theme-toggle');
+            if (themeBtn) {
+                const mode = document.documentElement.getAttribute('data-theme') || 'night';
+                themeBtn.innerText = (mode === 'light') ? t('night_mode') : t('light_mode');
+            }
+
+            // Start/Next buttons (host dependent text is set elsewhere, but we normalize base labels)
+            const startBtn = document.getElementById('start-game-btn');
+            if (startBtn && isHost) startBtn.innerText = t('start_game');
+
+            const nextBtn = document.getElementById('btn-next');
+            if (nextBtn && isHost) nextBtn.innerText = t('next_round');
+
+            // Action buttons
+            const foldBtn = document.getElementById('btn-fold');
+            const allinBtn = document.getElementById('btn-allin');
+            const rebuyBtn = document.getElementById('btn-rebuy');
+            if (foldBtn) foldBtn.innerText = t('btn_fold');
+            if (allinBtn) allinBtn.innerText = t('btn_allin');
+            if (rebuyBtn) rebuyBtn.innerText = t('btn_rebuy');
+            if (nextBtn) nextBtn.innerText = t('btn_confirm_next');
+
+            // Seat grid (already rendered): update labels for empty/AI buttons
+            try {
+                for (let i = 0; i < CONFIG.numPlayers; i++) {
+                    const statusEl = document.getElementById(`seat-status-${i}`);
+                    const joinBtn = document.getElementById(`join-btn-${i}`);
+                    const aiBtn = document.getElementById(`ai-btn-${i}`);
+                    const kickBtn = document.getElementById(`kick-btn-${i}`);
+                    const box = document.getElementById(`seat-box-${i}`);
+                    if (box) {
+                        const titleDiv = box.querySelector('div');
+                        if (titleDiv && titleDiv.innerHTML.includes('🔑')) {
+                            // keep HOST icon span; only rewrite the leading text
+                            titleDiv.childNodes[0].textContent = `${t('seat_label')} ${i + 1} `;
+                        } else if (titleDiv) {
+                            titleDiv.textContent = `${t('seat_label')} ${i + 1}`;
+                        }
+                    }
+                    if (joinBtn) joinBtn.innerText = t('seat_take');
+                    if (kickBtn) kickBtn.innerText = t('seat_remove');
+                    if (aiBtn) {
+                        aiBtn.innerText = aiBtn.classList.contains('active') ? t('seat_remove_ai') : t('seat_add_ai');
+                    }
+                    if (statusEl) {
+                        const v = String(statusEl.innerText || '');
+                        if (v === 'Empty' || v === '空位') statusEl.innerText = t('seat_empty');
+                    }
+                }
+            } catch (_) {}
+
+            // Refresh game message + history to reflect current language
+            try { rerenderHistory(); } catch (_) {}
+            try {
+                // multiplayer: gameState.round is synced from server
+                if (IS_MULTIPLAYER) {
+                    const activeName = gameState.players?.find(p => p.id === gameState.activeSeatIdx)?.name || '';
+                    setGameMsg(gameState.round, activeName, gameState.pot, (mySeatIdx === -1));
+                } else {
+                    const p = gameState.players?.[gameState.activeIdx];
+                    setGameMsg(gameState.round, p?.name || '', gameState.pot, false);
+                }
+            } catch (_) {}
         }
 
         // --- SFX (WebAudio, no external assets required) ---
@@ -783,6 +1071,7 @@
             createTable();
             // 不再直接调用 createPlayers，由选座流程控制
             setupEvents();
+            try { applyLanguageToUI(); } catch (_) {}
             // 页面右下角显示 build tag，确认你加载的是最新文件
             const buildEl = document.createElement('div');
             buildEl.id = 'build-tag';
@@ -901,6 +1190,10 @@
                 // 让 UI 立刻回到可选座状态（server 会随后广播 room_state）
                 document.getElementById('seat-overlay').style.display = 'block';
                 document.getElementById('seat-overlay').style.opacity = '1';
+            });
+            socket.on('kicked_in_hand', ({ seatIdx, msg }) => {
+                addToHistory(msg || `You were removed from this hand by host (Seat ${Number(seatIdx) + 1}).`);
+                // You stay in room; you can play again next hand.
             });
 
             // Rebuy flow (host approves)
@@ -1050,7 +1343,9 @@
                         const winNames = winners.map(w => w.name).join(' & ') || 'N/A';
                         const row = document.createElement('div');
                         row.style.cssText = 'text-align:left; font-size: 0.9em; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);';
-                        row.innerHTML = `<span style="color:#fff;opacity:0.9;">Hand ${h.handNum || ''}:</span> <span style="color:gold;">${winNames}</span> <span style="opacity:0.75;">(${h.desc || ''})</span>`;
+                        const handLabel = (UI_LANG === 'zh') ? `第${h.handNum || ''}局:` : `Hand ${h.handNum || ''}:`;
+                        const desc = (UI_LANG === 'zh') ? trHandDesc(h.desc || '') : (h.desc || '');
+                        row.innerHTML = `<span style="color:#fff;opacity:0.9;">${handLabel}</span> <span style="color:gold;">${winNames}</span> <span style="opacity:0.75;">(${desc})</span>`;
                         list.appendChild(row);
                     });
                 }
@@ -1102,11 +1397,10 @@
                     gameState.minRaise = s.minRaise;
                     if (currentRaiseInput < gameState.minRaise) currentRaiseInput = gameState.minRaise;
                 }
-                document.getElementById('game-msg').innerText = `${s.round}: ${(s.activeSeatIdx !== null && s.activeSeatIdx !== undefined) ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...') : ''}`;
-                // 小提示：如果你没成功入座，按钮永远不会亮（避免“被跳过”的困惑）
-                if (IS_MULTIPLAYER && mySeatIdx === -1) {
-                    document.getElementById('game-msg').innerText = `${s.round}: Spectator (pick a seat before start)`;
-                }
+                const activeName = (s.activeSeatIdx !== null && s.activeSeatIdx !== undefined)
+                    ? (s.players.find(p=>p.seatIdx===s.activeSeatIdx)?.name || '...')
+                    : '';
+                setGameMsg(s.round, activeName, s.pot, (IS_MULTIPLAYER && mySeatIdx === -1));
                 // 控制区显示逻辑（联机）：HAND_OVER 才显示 Next Round；否则显示常规按钮并根据 activeSeatIdx 开关
                 const btnNext = document.getElementById('btn-next');
                 const btnCheck = document.getElementById('btn-check');
@@ -1114,7 +1408,7 @@
                 if (s.round === 'HAND_OVER') {
                     document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
                     btnNext.style.display = 'block';
-                    btnNext.innerText = isHost ? 'Next Round' : 'Waiting for Host';
+                    btnNext.innerText = isHost ? t('next_round') : t('waiting_host');
                     btnNext.disabled = !isHost;
                     toggleButtons(false);
                 } else {
@@ -2330,16 +2624,17 @@
                     new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
                     getChipMaterial().clone()
                 );
-                chip.material.transparent = true;
-                chip.material.opacity = 0.85;
+                // Opaque chips for stable stacking (avoids transparency sorting shimmer)
+                chip.material.transparent = false;
+                chip.material.opacity = 1.0;
                 chip.position.copy(p.pos);
-                chip.position.y = 0.08;
+                chip.position.y = 0.06 + i * 0.006; // physically stacked
                 // keep label oriented to that seat (+90deg correction for cap UV)
                 chip.rotation.set(0, (p.angle || 0) + Math.PI / 2, 0);
                 chipsGroup.add(chip);
                 gsap.to(chip.position, {
                     x: (Math.random() - 0.5) * 2,
-                    y: 0.05,
+                    y: 0.05 + i * 0.006,
                     z: (Math.random() - 0.5) * 2,
                     duration: 0.65 + Math.random() * 0.12,
                     ease: "power2.out"
@@ -2377,7 +2672,7 @@
             }
 
             dbg(`turn ${p.name} idx=${gameState.activeIdx}`);
-            document.getElementById('game-msg').innerText = `${gameState.round}: ${p.name}'s Turn (Idx:${gameState.activeIdx})`;
+            setGameMsg(gameState.round, p.name, gameState.pot, false);
             if(p.id === gameState.myPlayerIdx) {
                 toggleButtons(true);
             } else {
@@ -2720,34 +3015,43 @@
             });
             document.getElementById('raise-amount-display').innerText = currentRaiseInput;
 
-            // Offline: keep Check button label consistent with online (shows needed amount)
+            // Update action button labels immediately (both offline + multiplayer)
             try {
                 const btnCheck = document.getElementById('btn-check');
                 const btnRaise = document.getElementById('btn-raise');
-                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
-                const toCall = me ? Math.max(0, Number(gameState.currentMaxBet || 0) - Number(me.currentBet || 0)) : 0;
-                const callPay = me ? Math.max(0, Math.min(toCall, Number(me.chips || 0))) : 0;
-                if (btnCheck && !IS_MULTIPLAYER) {
+                const seatId = IS_MULTIPLAYER ? mySeatIdx : gameState.myPlayerIdx;
+                const me = gameState.players.find(p => p.id === seatId);
+                const maxBet = Number(gameState.currentMaxBet || 0);
+                const myBet = me ? Number(me.currentBet || 0) : 0;
+                const myChips = me ? Number(me.chips || 0) : 0;
+                const toCall = me ? Math.max(0, maxBet - myBet) : 0;
+                const callPay = Math.max(0, Math.min(toCall, myChips));
+                if (btnCheck) {
                     btnCheck.innerText = (toCall > 0)
-                        ? `Call $${callPay}${(me && Number(me.chips || 0) > 0 && Number(me.chips || 0) < toCall) ? ' (All-in)' : ''}`
-                        : 'Check';
+                        ? `${t('btn_call')} $${callPay}${(myChips > 0 && myChips < toCall) ? ` (${t('btn_allin')})` : ''}`
+                        : t('btn_check');
                     btnCheck.style.display = 'block';
                 }
-                if (btnRaise && !IS_MULTIPLAYER) {
+                if (btnRaise) {
                     if (toCall > 0) {
-                        btnRaise.innerText = `Raise +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
+                        btnRaise.innerText = `${t('btn_raise')} +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
                     } else {
                         const betAmt = Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0) || 0);
-                        btnRaise.innerText = `Bet $${betAmt}`;
+                        btnRaise.innerText = `${t('btn_bet')} $${betAmt}`;
                     }
                 }
             } catch (_) {}
         }
 
         function addToHistory(msg) {
+            const raw = String(msg || '');
+            // store newest-first so rerender preserves visual order
+            activityRaw.unshift(raw);
+            if (activityRaw.length > 220) activityRaw.pop();
             const list = document.getElementById('history-list');
+            if (!list) return;
             const div = document.createElement('div');
-            div.innerHTML = `<span style="color:#d4af37;opacity:0.5">></span> ${msg}`;
+            div.innerHTML = `<span style="color:#d4af37;opacity:0.5">></span> ${translateActivity(raw)}`;
             list.prepend(div);
         }
 
@@ -2862,6 +3166,19 @@
                         UI_LANG = (UI_LANG === 'en') ? 'zh' : 'en';
                         localStorage.setItem('nebula_lang', UI_LANG);
                         applyLang();
+                        applyLanguageToUI();
+                    };
+                }
+            } catch (_) {}
+
+            // Lobby language toggle
+            try {
+                const lobbyLangBtn = document.getElementById('lang-toggle-lobby');
+                if (lobbyLangBtn) {
+                    lobbyLangBtn.onclick = () => {
+                        UI_LANG = (UI_LANG === 'en') ? 'zh' : 'en';
+                        localStorage.setItem('nebula_lang', UI_LANG);
+                        applyLanguageToUI();
                     };
                 }
             } catch (_) {}
@@ -2910,7 +3227,7 @@
                     wireMultiplayer();
                     pendingJoin = true;
                     joinedRoomOnce = false;
-                    socket.emit('join_room', { roomId: room, name: user });
+                    socket.emit('join_room', { roomId: room, name: user, clientId: CLIENT_ID });
                     document.getElementById('lobby-overlay').style.display = 'none';
                     showSeatSelection(); // UI仍显示，但数据来自服务器
                 } else {
@@ -2931,14 +3248,14 @@
                     box.id = `seat-box-${i}`;
                     box.innerHTML = `
                         <div style="position: relative; font-weight: bold; margin-bottom: 10px;">
-                            Seat ${i+1}
+                            ${t('seat_label')} ${i+1}
                             <span id="seat-host-${i}" style="display:none; position:absolute; right:0; top:0; font-size:12px; color:gold; opacity:0.95;">🔑 HOST</span>
                         </div>
-                        <div id="seat-status-${i}" style="font-size: 0.8em; margin-bottom: 15px; color: #aaa;">Empty</div>
+                        <div id="seat-status-${i}" style="font-size: 0.8em; margin-bottom: 15px; color: #aaa;">${t('seat_empty')}</div>
                         <div class="seat-actions">
-                            <button class="seat-action-btn" id="join-btn-${i}">Take Seat</button>
-                            <button class="seat-action-btn" id="ai-btn-${i}">Add AI</button>
-                            <button class="seat-action-btn" id="kick-btn-${i}" style="display:none;">Remove</button>
+                            <button class="seat-action-btn" id="join-btn-${i}">${t('seat_take')}</button>
+                            <button class="seat-action-btn" id="ai-btn-${i}">${t('seat_add_ai')}</button>
+                            <button class="seat-action-btn" id="kick-btn-${i}" style="display:none;">${t('seat_remove')}</button>
                         </div>
                     `;
                     seatGrid.appendChild(box);
@@ -2998,15 +3315,15 @@
                             statusEl.style.color = "#00ff00";
                             joinBtn.style.display = "none";
                             aiBtn.classList.add('active');
-                            aiBtn.innerText = "Remove AI";
+                            aiBtn.innerText = t('seat_remove_ai');
                         } else {
-                            statusEl.innerText = "Empty";
+                            statusEl.innerText = t('seat_empty');
                             statusEl.style.color = "#aaa";
                             joinBtn.style.display = "block";
                             joinBtn.classList.remove('active');
                             aiBtn.style.display = "block";
                             aiBtn.classList.remove('active');
-                            aiBtn.innerText = "Add AI";
+                            aiBtn.innerText = t('seat_add_ai');
                         }
                     }
                 }
@@ -3061,7 +3378,7 @@
             const applyTheme = (mode) => {
                 document.documentElement.setAttribute('data-theme', mode);
                 localStorage.setItem('nebula_theme', mode);
-                themeBtn.innerText = (mode === 'light') ? 'Night Mode' : 'Light Mode';
+                themeBtn.innerText = (mode === 'light') ? (UI_LANG === 'zh' ? '夜间模式' : 'Night Mode') : (UI_LANG === 'zh' ? '明亮模式' : 'Light Mode');
 
                 // also adjust 3D background/fog a bit
                 if (scene) {
@@ -3185,7 +3502,7 @@
             // 同步“Start Game”按钮是否可点
             const startBtn = document.getElementById('start-game-btn');
             if (!startBtn) return;
-            startBtn.innerText = isHost ? 'Start Game' : 'Waiting for Host';
+            startBtn.innerText = isHost ? t('start_game') : t('waiting_host');
             startBtn.disabled = !isHost;
 
             // 同步每个座位的显示（Empty / YOU / AI BOT / PlayerName）
@@ -3203,13 +3520,14 @@
 
                 const s = state.seats?.[i] || null;
                 if (!s) {
-                    statusEl.innerText = "Empty";
+                    statusEl.innerText = t('seat_empty');
                     statusEl.style.color = "#aaa";
                     joinBtn.style.display = "block";
                     joinBtn.classList.remove('active');
                     aiBtn.style.display = isHost ? "block" : "none";
                     aiBtn.classList.remove('active');
-                    aiBtn.innerText = "Add AI";
+                    aiBtn.innerText = t('seat_add_ai');
+                    joinBtn.innerText = t('seat_take');
                     if (kickBtn) kickBtn.style.display = "none";
                     continue;
                 }
@@ -3220,7 +3538,7 @@
                     joinBtn.style.display = "none";
                     aiBtn.style.display = isHost ? "block" : "none";
                     aiBtn.classList.add('active');
-                    aiBtn.innerText = "Remove AI";
+                    aiBtn.innerText = t('seat_remove_ai');
                     if (kickBtn) kickBtn.style.display = "none";
                     continue;
                 }
