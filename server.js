@@ -124,6 +124,7 @@ function makeRoom(roomId) {
 
     // match summary
     handHistory: [], // [{handNum, winners:[{seatIdx,name}], desc}]
+    activityLog: [], // recent activity strings (for reconnect sync)
     closing: false,
     closeTimer: null,
     expectedAcks: new Set(),
@@ -300,6 +301,11 @@ function broadcastRoom(room) {
 }
 
 function broadcastActivity(room, msg) {
+  try {
+    if (!Array.isArray(room.activityLog)) room.activityLog = [];
+    room.activityLog.push(String(msg));
+    if (room.activityLog.length > 250) room.activityLog.splice(0, room.activityLog.length - 250);
+  } catch (_) {}
   io.to(room.roomId).emit("activity", msg);
 }
 
@@ -1002,8 +1008,29 @@ io.on("connection", (socket) => {
 
     socket.emit("room_state", getRoomSummary(room, socket.id));
     emitYouState(room);
+    // Sync recent activity to reconnecting clients (helps after refresh)
+    try {
+      const items = Array.isArray(room.activityLog) ? room.activityLog.slice(-200) : [];
+      socket.emit("activity_sync", { items });
+    } catch (_) {}
     broadcastRoom(room);
     broadcastGame(room);
+    // If rejoining an active hand, re-send private hand and kick the turn loop to prevent stalls.
+    try {
+      if (room.started && !room.closing) {
+        const seatIdx = socket.data.seatIdx;
+        if (Number.isInteger(seatIdx) && seatIdx >= 0 && seatIdx < SEATS) {
+          const seat = room.seats[seatIdx];
+          const p = getPlayer(room, seatIdx);
+          if (seat && seat.type === "player" && p && Array.isArray(p.hand) && p.hand.length >= 2) {
+            socket.emit("private_hand", { seatIdx, hand: p.hand.slice(0, 2) });
+          }
+        }
+        if (room.round !== "HAND_OVER") {
+          requestTurn(room);
+        }
+      }
+    } catch (_) {}
   });
 
   // ---- Voice signaling (WebRTC; audio is P2P) ----
