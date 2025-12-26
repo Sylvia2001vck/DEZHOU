@@ -164,29 +164,39 @@
             }
             #start-game-btn { width: 100% !important; }
 
-            /* Decor panel: fixed above Start Game and collapsible */
+            /* Decor panel (seat selection): compact corner card + collapsible */
             #decor-panel {
                 position: fixed !important;
                 left: 10px !important;
                 transform: none !important;
-                width: calc(100vw - 20px) !important;
+                width: min(260px, calc(100vw - 20px)) !important;
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 74px) !important;
                 z-index: 970;
+                max-height: 42vh;
+                overflow-y: auto;
             }
             #decor-panel.collapsed #decor-body,
             #decor-panel.collapsed #decor-hint { display: none; }
 
             /* In-game panels */
-            #ui-overlay { top: 10px; left: 10px; width: calc(100vw - 20px); }
-            #ui-overlay .panel { width: auto !important; }
+            #ui-overlay { position: fixed; top: 10px; left: 10px; width: auto; z-index: 12; }
+            #ui-overlay .panel { width: min(250px, calc(100vw - 20px)) !important; padding: 10px; }
+            #game-msg { font-size: 0.92em; letter-spacing: 1px; }
+            #rules-btn { padding: 7px 12px; border-radius: 16px; }
+            #rules-modal { width: min(260px, calc(100vw - 40px)); max-height: 40vh; }
+
             #history-panel {
+                position: fixed;
+                top: 10px;
                 right: 10px;
-                left: 10px;
-                top: auto;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 170px);
-                width: auto;
-                max-height: 22vh;
+                left: auto;
+                bottom: auto;
+                width: min(250px, calc(100vw - 20px));
+                max-height: 28vh;
+                z-index: 12;
             }
+            #history-panel #history-list { max-height: 22vh; overflow-y: auto; }
+            #history-panel.collapsed #history-list { display: none; }
             #controls {
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
                 width: calc(100vw - 14px);
@@ -196,6 +206,32 @@
             }
             .touch-btn { padding: 10px 12px; min-width: 0; font-size: 0.86em; }
             .adjust-panel { width: 100%; justify-content: center; }
+
+            /* Icon-only buttons on mobile (keeps aria-label/title for accessibility) */
+            .icon-btn {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                padding: 0 !important;
+                border-radius: 999px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 0 !important; /* hide text */
+                line-height: 1 !important;
+                letter-spacing: 0 !important;
+            }
+            .icon-btn::before {
+                content: attr(data-icon);
+                font-size: 18px;
+                line-height: 1;
+            }
+            /* Make the small icon buttons a bit less visually heavy */
+            #history-collapse.icon-btn,
+            #decor-collapse.icon-btn {
+                border-radius: 999px !important;
+                padding: 0 !important;
+            }
         }
     </style>
 </head>
@@ -348,7 +384,10 @@
     <audio id="bgm" src="Love_Me.mp3" loop preload="auto"></audio>
 
     <div id="history-panel" class="panel">
-        <h3 style="margin: 0 0 10px 0; font-size: 0.9em; color: rgba(212, 175, 55, 0.6);">ACTIVITY</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <h3 style="margin: 0; font-size: 0.9em; color: rgba(212, 175, 55, 0.6);">ACTIVITY</h3>
+            <button id="history-collapse" class="touch-btn" style="width: 78px; padding: 8px 10px; margin:0; font-size:0.82em;">Hide</button>
+        </div>
         <div id="history-list" style="font-size: 0.8em; line-height: 1.6;"></div>
     </div>
 
@@ -500,6 +539,9 @@
                     decor_set: 'Decor set:',
                     decor_hide: 'Hide',
                     decor_show: 'Show'
+                    ,
+                    history_hide: 'Hide',
+                    history_show: 'Show'
                 },
                 zh: {
                     lang_label: 'Language: 中文',
@@ -558,6 +600,9 @@
                     decor_set: '摆件已设置：',
                     decor_hide: '收起',
                     decor_show: '展开'
+                    ,
+                    history_hide: '收起',
+                    history_show: '展开'
                 }
             };
             return (dict[UI_LANG] && dict[UI_LANG][key]) || (dict.en[key] || key);
@@ -712,6 +757,16 @@
                 }
             } catch (_) {}
 
+            // Activity panel collapse button
+            try {
+                const histBtn = document.getElementById('history-collapse');
+                const histPanel = document.getElementById('history-panel');
+                if (histBtn && histPanel) {
+                    const collapsed = histPanel.classList.contains('collapsed');
+                    histBtn.innerText = collapsed ? t('history_show') : t('history_hide');
+                }
+            } catch (_) {}
+
             // Rules button
             const rulesBtn = document.getElementById('rules-btn');
             if (rulesBtn) rulesBtn.innerText = t('rules');
@@ -783,6 +838,59 @@
                     const p = gameState.players?.[gameState.activeIdx];
                     setGameMsg(gameState.round, p?.name || '', gameState.pot, false);
                 }
+            } catch (_) {}
+
+            // Mobile: iconify utility buttons (top-left panel + corner panels)
+            try { applyMobileIconButtons(); } catch (_) {}
+        }
+
+        function applyMobileIconButtons() {
+            const isMobile = () => window.innerWidth <= 600;
+            const mobile = isMobile();
+            const setIconBtn = (id, icon, label) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (mobile) {
+                    el.classList.add('icon-btn');
+                    el.setAttribute('data-icon', String(icon || '•'));
+                    if (label) {
+                        el.setAttribute('title', String(label));
+                        el.setAttribute('aria-label', String(label));
+                    }
+                } else {
+                    el.classList.remove('icon-btn');
+                    el.removeAttribute('data-icon');
+                    if (label) {
+                        el.setAttribute('title', String(label));
+                        el.setAttribute('aria-label', String(label));
+                    }
+                }
+            };
+
+            const mode = document.documentElement.getAttribute('data-theme') || 'night';
+            const themeLabel = (mode === 'light') ? t('night_mode') : t('light_mode');
+            const themeIcon = (mode === 'light') ? '☾' : '☀';
+
+            // Left panel buttons
+            setIconBtn('rules-btn', '?', t('rules'));
+            setIconBtn('theme-toggle', themeIcon, themeLabel);
+            setIconBtn('bgm-toggle', '♫', 'BGM');
+            setIconBtn('sfx-toggle', '🔊', 'SFX');
+            setIconBtn('lang-toggle', '🌐', t('lang_label'));
+            setIconBtn('mic-toggle', '🎙', 'Mic');
+
+            // Seat selection: decor collapse
+            try {
+                const dp = document.getElementById('decor-panel');
+                const collapsed = !!dp && dp.classList.contains('collapsed');
+                setIconBtn('decor-collapse', collapsed ? '▸' : '▾', collapsed ? t('decor_show') : t('decor_hide'));
+            } catch (_) {}
+
+            // Activity panel collapse
+            try {
+                const hp = document.getElementById('history-panel');
+                const collapsed = !!hp && hp.classList.contains('collapsed');
+                setIconBtn('history-collapse', collapsed ? '▸' : '▾', collapsed ? t('history_show') : t('history_hide'));
             } catch (_) {}
         }
 
@@ -3865,6 +3973,13 @@
 
         function setupEvents() {
             window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+            try {
+                const prev = window.onresize;
+                window.onresize = () => {
+                    try { prev && prev(); } catch (_) {}
+                    try { applyMobileIconButtons(); } catch (_) {}
+                };
+            } catch (_) {}
 
             // Decor picker (seat selection)
             try {
@@ -3929,6 +4044,32 @@
                     collapseBtn.onclick = (e) => {
                         try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
                         applyCollapsed(!panel.classList.contains('collapsed'));
+                    };
+                }
+            } catch (_) {}
+
+            // Activity panel collapse (mobile-friendly; keep it in the corner)
+            try {
+                const histPanel = document.getElementById('history-panel');
+                const histBtn = document.getElementById('history-collapse');
+                const isMobile = () => window.innerWidth <= 600;
+                const applyHistCollapsed = (collapsed) => {
+                    if (!histPanel) return;
+                    histPanel.classList.toggle('collapsed', !!collapsed);
+                    try { localStorage.setItem('nebula_history_collapsed', collapsed ? '1' : '0'); } catch (_) {}
+                    try { applyLanguageToUI(); } catch (_) {}
+                };
+                // default collapsed on mobile, but remember preference
+                try {
+                    const saved = localStorage.getItem('nebula_history_collapsed');
+                    if (saved === null && isMobile()) applyHistCollapsed(true);
+                    else if (saved === '1') applyHistCollapsed(true);
+                    else if (saved === '0') applyHistCollapsed(false);
+                } catch (_) {}
+                if (histBtn && histPanel) {
+                    histBtn.onclick = (e) => {
+                        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+                        applyHistCollapsed(!histPanel.classList.contains('collapsed'));
                     };
                 }
             } catch (_) {}
