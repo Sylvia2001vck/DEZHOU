@@ -207,8 +207,10 @@
                 margin: 16px auto 120px;
                 grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
+                align-items: stretch;
+                grid-auto-rows: 1fr;
             }
-            .seat-box { padding: 10px; }
+            .seat-box { padding: 10px; height: 100%; }
             /* Make both columns visually balanced */
             .seat-box { min-height: 190px; display: flex; flex-direction: column; justify-content: space-between; }
             .seat-action-btn { padding: 8px; font-size: 0.78em; }
@@ -222,6 +224,7 @@
                 width: calc(100vw - 20px);
                 z-index: 980;
                 margin: 8px auto 10px;
+                grid-column: 1 / -1;
             }
             #start-game-btn { width: 100% !important; }
 
@@ -263,6 +266,27 @@
             #history-panel.collapsed { width: 44px; max-height: none; padding: 8px; }
             #history-panel.collapsed h3 { display: none; }
             #history-panel.collapsed #history-collapse { width: 32px !important; height: 32px !important; }
+            
+            /* Match-over / summary modal: fit phone screens */
+            #summary-modal {
+                width: calc(100vw - 20px);
+                max-width: none;
+                padding: 16px;
+                border-radius: 14px;
+                max-height: calc(100vh - 24px);
+                overflow-y: auto;
+            }
+            #summary-modal h2 { font-size: 1.15em; margin: 0 0 8px 0; }
+            #summary-modal p { margin: 6px 0 10px 0; font-size: 0.9em; }
+            .summary-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                font-size: 0.9em;
+                padding: 8px 0;
+            }
+            .summary-item span { min-width: 0 !important; text-align: left !important; }
+            #summary-confirm-btn { padding: 12px; font-size: 0.95em; }
             #controls {
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
                 width: calc(100vw - 14px);
@@ -917,7 +941,13 @@
         }
 
         function applyMobileIconButtons() {
-            const isMobile = () => window.innerWidth <= 600;
+            // "Phone UI" detection: include landscape phones / coarse-pointer devices
+            const isMobile = () => {
+                try {
+                    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+                } catch (_) {}
+                return window.innerWidth <= 900;
+            };
             const hud = document.getElementById('hud-panel');
             const hudCollapsed = !!hud && hud.classList.contains('collapsed');
             const hist = document.getElementById('history-panel');
@@ -936,16 +966,7 @@
                     }
                     return;
                 }
-                // Mobile in-game language toggle should stay full-size (user request)
-                if (isMobile() && id === 'lang-toggle') {
-                    el.classList.remove('icon-btn');
-                    el.removeAttribute('data-icon');
-                    if (label) {
-                        el.setAttribute('title', String(label));
-                        el.setAttribute('aria-label', String(label));
-                    }
-                    return;
-                }
+                // In-room controls: allow iconification on phone UI (user request)
                 // Desktop: when Activity is collapsed, make the collapse control icon-only too.
                 if (!isMobile() && id === 'history-collapse' && histCollapsed) {
                     el.classList.add('icon-btn');
