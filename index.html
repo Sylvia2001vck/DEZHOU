@@ -39,16 +39,19 @@
             background-color: var(--bg);
             background-image:
                 /* soft vignette */
-                radial-gradient(1200px 900px at 20% 10%, rgba(255, 210, 140, 0.12), rgba(0,0,0,0.0) 62%),
-                radial-gradient(1000px 900px at 85% 30%, rgba(255, 200, 120, 0.10), rgba(0,0,0,0.0) 62%),
+                radial-gradient(1200px 900px at 20% 10%, rgba(255, 210, 140, 0.18), rgba(0,0,0,0.0) 62%),
+                radial-gradient(1000px 900px at 85% 30%, rgba(255, 200, 120, 0.16), rgba(0,0,0,0.0) 62%),
                 /* wood grain lines */
-                repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 2px, rgba(0,0,0,0.0) 2px 16px),
-                repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 1px, rgba(0,0,0,0.0) 1px 18px),
-                repeating-linear-gradient(88deg, rgba(255,255,255,0.022) 0 1px, rgba(0,0,0,0.0) 1px 22px),
-                repeating-linear-gradient(92deg, rgba(0,0,0,0.030) 0 1px, rgba(0,0,0,0.0) 1px 26px),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.060) 0 2px, rgba(0,0,0,0.0) 2px 14px),
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.090) 0 1px, rgba(0,0,0,0.0) 1px 16px),
+                repeating-linear-gradient(88deg, rgba(255,255,255,0.050) 0 1px, rgba(0,0,0,0.0) 1px 20px),
+                repeating-linear-gradient(92deg, rgba(0,0,0,0.060) 0 1px, rgba(0,0,0,0.0) 1px 24px),
+                /* subtle knots */
+                radial-gradient(180px 140px at 18% 68%, rgba(0,0,0,0.14), rgba(0,0,0,0.0) 60%),
+                radial-gradient(220px 160px at 72% 38%, rgba(255,255,255,0.08), rgba(0,0,0,0.0) 62%),
                 /* base */
                 linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.18));
-            background-blend-mode: screen, screen, overlay, overlay, overlay, overlay, normal;
+            background-blend-mode: screen, screen, overlay, overlay, overlay, overlay, multiply, screen, normal;
         }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
@@ -82,21 +85,21 @@
         #rules-btn { position: relative; z-index: 20; background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
         #rules-btn:hover { background: var(--btn-hover-bg); box-shadow: 0 0 15px var(--btn-hover-shadow); }
         /* Rules panel: appears directly under the Rules button (inside the ui panel) */
-        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.35); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: var(--text); box-shadow: 0 0 35px rgba(0,0,0,0.18); scrollbar-width: thin; }
+        #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.30); padding: 12px 12px 8px; border-radius: 14px; z-index: 100; width: 330px; max-height: calc(100vh - 170px); overflow-y: auto; backdrop-filter: blur(12px); color: var(--text); box-shadow: 0 0 28px rgba(0,0,0,0.16); scrollbar-width: thin; }
         #rules-modal::-webkit-scrollbar { width: 10px; }
         #rules-modal::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.35); border-radius: 10px; border: 2px solid rgba(0,0,0,0.15); }
         #rules-modal::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 10px; }
-        #rules-modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
+        #rules-modal h2 { color: var(--accent); margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid rgba(212, 175, 55, 0.18); padding-bottom: 8px; font-size: 1.05em; }
         #rules-modal ul { list-style: none; padding: 0; }
-        #rules-modal li { margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
+        #rules-modal li { margin-bottom: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
         
-        .rule-item { margin-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.1); padding-bottom: 10px; }
+        .rule-item { margin-bottom: 12px; border-bottom: 1px solid rgba(212, 175, 55, 0.10); padding-bottom: 8px; font-size: 0.82em; }
         .card-icons { display: flex; gap: 5px; margin-top: 5px; }
         .card-icons span { background: #fff; color: #000; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-family: serif; min-width: 25px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .card-icons .card-red { color: #bb3333; }
         .card-icons .card-black { color: #1a1a1a; }
 
-        #rules-modal .rank-name { font-weight: bold; color: var(--accent); font-size: 1.1em; }
+        #rules-modal .rank-name { font-weight: bold; color: var(--accent); font-size: 1.02em; }
         #close-rules { float: right; cursor: pointer; color: var(--accent); font-size: 20px; }
 
         #history-panel { position: absolute; right: 20px; top: 20px; width: 280px; max-height: 40vh; overflow-y: auto; z-index: 10; }
@@ -165,6 +168,22 @@
             <div class="start-game-area">
                 <button id="start-game-btn" class="lobby-btn" style="width: 300px;">Start Game</button>
             </div>
+        </div>
+        <div id="decor-panel" class="panel" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 22px; width: 520px; max-width: calc(100vw - 40px); pointer-events: auto;">
+            <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+                <div id="decor-title" style="font-weight:800; letter-spacing:0.5px;">Table Decor</div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <select id="decor-select" class="lobby-input" style="width: 220px; padding: 8px 10px; margin:0;">
+                        <option value="none">None</option>
+                        <option value="cola">Cola</option>
+                        <option value="coffee">Coffee</option>
+                        <option value="wine">Red Wine</option>
+                        <option value="cigar">Cigar</option>
+                    </select>
+                    <button id="decor-apply" class="lobby-btn" style="width: 160px; margin:0; padding: 12px 14px;">Apply</button>
+                </div>
+            </div>
+            <div id="decor-hint" style="margin-top:8px; font-size: 0.78em; opacity: 0.8;">Your choice will appear on the table to the right of your hole cards (visible to everyone).</div>
         </div>
     </div>
 
@@ -357,6 +376,7 @@
         let lastOpponentPlaceholderHandNum = null;
         let UI_LANG = localStorage.getItem('nebula_lang') || 'en';
         const activityRaw = [];
+        const seatDecor = Array(CONFIG.numPlayers).fill('none'); // offline decor per seat
         function t(key) {
             const dict = {
                 en: {
@@ -404,7 +424,16 @@
                     seat_remove: 'Remove',
                     seat_label: 'Seat',
                     pot_label: 'Pot',
-                    acting_label: 'acting'
+                    acting_label: 'acting',
+                    decor_title: 'Table Decor',
+                    decor_hint: 'Your choice will appear on the table to the right of your hole cards (visible to everyone).',
+                    decor_apply: 'Apply',
+                    decor_none: 'None',
+                    decor_cola: 'Cola',
+                    decor_coffee: 'Cappuccino',
+                    decor_wine: 'Red Wine',
+                    decor_cigar: 'Cigar',
+                    decor_set: 'Decor set:'
                 },
                 zh: {
                     lang_label: 'Language: 中文',
@@ -451,10 +480,28 @@
                     seat_remove: '移除',
                     seat_label: '座位',
                     pot_label: '牌池',
-                    acting_label: '行动中'
+                    acting_label: '行动中',
+                    decor_title: '桌面摆件',
+                    decor_hint: '你的选择会出现在你手牌右侧的桌面上（所有人可见）。',
+                    decor_apply: '应用',
+                    decor_none: '无',
+                    decor_cola: '可乐',
+                    decor_coffee: '卡布奇诺',
+                    decor_wine: '红酒',
+                    decor_cigar: '雪茄',
+                    decor_set: '摆件已设置：'
                 }
             };
             return (dict[UI_LANG] && dict[UI_LANG][key]) || (dict.en[key] || key);
+        }
+
+        function trDecorChoice(v) {
+            const s = String(v || 'none').toLowerCase();
+            if (s === 'cola') return t('decor_cola');
+            if (s === 'coffee') return t('decor_coffee');
+            if (s === 'wine') return t('decor_wine');
+            if (s === 'cigar') return t('decor_cigar');
+            return t('decor_none');
         }
 
         function trRound(r) {
@@ -568,6 +615,28 @@
             // Seat selection header
             const seatTitle = document.getElementById('seat-selection-title');
             if (seatTitle) seatTitle.innerText = t('seat_selection');
+
+            // Decor panel (seat selection)
+            try {
+                const decorTitle = document.getElementById('decor-title');
+                const decorHint = document.getElementById('decor-hint');
+                const decorBtn = document.getElementById('decor-apply');
+                const decorSel = document.getElementById('decor-select');
+                if (decorTitle) decorTitle.innerText = t('decor_title');
+                if (decorHint) decorHint.innerText = t('decor_hint');
+                if (decorBtn) decorBtn.innerText = t('decor_apply');
+                if (decorSel) {
+                    const setOpt = (val, label) => {
+                        const opt = decorSel.querySelector(`option[value="${val}"]`);
+                        if (opt) opt.textContent = label;
+                    };
+                    setOpt('none', t('decor_none'));
+                    setOpt('cola', t('decor_cola'));
+                    setOpt('coffee', t('decor_coffee'));
+                    setOpt('wine', t('decor_wine'));
+                    setOpt('cigar', t('decor_cigar'));
+                }
+            } catch (_) {}
 
             // Rules button
             const rulesBtn = document.getElementById('rules-btn');
@@ -1140,8 +1209,21 @@
                 gameState.seatMeta = {};
                 (state.seats || []).forEach(s => {
                     if(!s) return;
-                    gameState.seatMeta[s.seatIdx] = { type: s.type, name: s.name };
+                    gameState.seatMeta[s.seatIdx] = { type: s.type, name: s.name, decor: s.decor || 'none' };
                 });
+            // If already at table, update decor meshes live
+            try {
+                if (gameState.mpInitialized && Array.isArray(gameState.players)) {
+                    gameState.players.forEach(p => {
+                        const meta = gameState.seatMeta?.[p.id];
+                        const nextDecor = meta?.decor || 'none';
+                        if (p.decorType !== nextDecor) {
+                            p.decorType = nextDecor;
+                            updatePlayerDecorMesh(p);
+                        }
+                    });
+                }
+            } catch (_) {}
 
                 // 同步联机设置（initial chips / total hands）
                 if (state.settings) {
@@ -1160,6 +1242,7 @@
                 if (state.started) {
                     enterMultiplayerGame();
                 }
+                try { window.__updateDecorPanel?.(); } catch (_) {}
             });
 
             socket.on('activity', (msg) => addToHistory(msg));
@@ -1698,12 +1781,20 @@
             const chipCount = Math.max(1, Math.min(6, Math.floor((Number.isFinite(amt) ? amt : 50) / 50)));
 
             for (let i = 0; i < chipCount; i++) {
+                const stackIndex = potChipFX.length;
+                const perLayer = 14;
+                const layer = Math.floor(stackIndex / perLayer);
+                const within = stackIndex % perLayer;
+                const stackY = 0.05 + layer * 0.006 + within * 0.00018; // physical-ish stacking; avoids z-fighting
+
                 const chip = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
                     getChipMaterial().clone()
                 );
+                // During flight: allow slight translucency, but disable depthWrite to avoid sorting shimmer.
                 chip.material.transparent = true;
                 chip.material.opacity = 0.7;
+                chip.material.depthWrite = false;
                 chip.position.set(p.pos.x, 0.08, p.pos.z);
                 // 让筹码“平躺”在桌面（和离线一致）：Cylinder 默认就是平躺（圆面朝上）
                 // keep label oriented to that seat (+90deg correction for cap UV)
@@ -1716,9 +1807,18 @@
                 gsap.to(chip.position, {
                     x: tx,
                     z: tz,
-                    y: 0.05,
+                    y: stackY,
                     duration: 0.65 + Math.random() * 0.15,
-                    ease: "power2.out"
+                    ease: "power2.out",
+                    onComplete: () => {
+                        // Once in pot: make it opaque & depthWrite=true to avoid heavy overlap flicker.
+                        try {
+                            chip.material.transparent = false;
+                            chip.material.opacity = 1.0;
+                            chip.material.depthWrite = true;
+                            chip.material.needsUpdate = true;
+                        } catch (_) {}
+                    }
                 });
                 gsap.to(chip.material, {
                     opacity: 0.55,
@@ -1745,6 +1845,11 @@
                 if (!p) return;
                 const wx = p.pos.x + (Math.random() - 0.5) * 0.7;
                 const wz = p.pos.z + (Math.random() - 0.5) * 0.7;
+                // fading chips: use transparent + depthWrite=false (prevents shimmer while overlapping)
+                try {
+                    chip.material.transparent = true;
+                    chip.material.depthWrite = false;
+                } catch (_) {}
                 gsap.to(chip.position, {
                     x: wx,
                     z: wz,
@@ -1778,6 +1883,11 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            // Ensure correct color output for materials (glass especially)
+            try {
+                if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
+                else if ('outputEncoding' in renderer && THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+            } catch (_) {}
             renderer.setClearColor(0x000000, 1);
             document.getElementById('container').appendChild(renderer.domElement);
             controls = new OrbitControls(camera, renderer.domElement);
@@ -1788,6 +1898,46 @@
             environmentGroup = new THREE.Group();
             playerStacksGroup = new THREE.Group();
             scene.add(cardsGroup, chipsGroup, tableGroup, environmentGroup, playerStacksGroup);
+
+            // Add a subtle procedural environment for natural reflections (improves glass sheen).
+            try {
+                if (!scene.environment && THREE.PMREMGenerator) {
+                    const envCanvas = document.createElement('canvas');
+                    envCanvas.width = 512; envCanvas.height = 256;
+                    const ec = envCanvas.getContext('2d');
+                    // sky gradient
+                    const g = ec.createLinearGradient(0, 0, 0, 256);
+                    g.addColorStop(0, '#0a0b10');
+                    g.addColorStop(0.35, '#1b1f2a');
+                    g.addColorStop(0.7, '#2a2a2a');
+                    g.addColorStop(1, '#6a5b3f');
+                    ec.fillStyle = g;
+                    ec.fillRect(0, 0, 512, 256);
+                    // soft bright bands (studio lights)
+                    ec.globalAlpha = 0.18;
+                    ec.fillStyle = '#ffffff';
+                    ec.fillRect(70, 30, 110, 20);
+                    ec.fillRect(300, 55, 150, 28);
+                    ec.fillRect(120, 110, 280, 18);
+                    ec.globalAlpha = 0.10;
+                    ec.fillRect(0, 170, 512, 36);
+                    ec.globalAlpha = 1;
+
+                    const envTex = new THREE.CanvasTexture(envCanvas);
+                    try {
+                        if ('colorSpace' in envTex && THREE.SRGBColorSpace) envTex.colorSpace = THREE.SRGBColorSpace;
+                    } catch (_) {}
+                    envTex.mapping = THREE.EquirectangularReflectionMapping;
+                    envTex.needsUpdate = true;
+
+                    const pmrem = new THREE.PMREMGenerator(renderer);
+                    pmrem.compileEquirectangularShader();
+                    const envRT = pmrem.fromEquirectangular(envTex);
+                    scene.environment = envRT.texture;
+                    try { envTex.dispose(); } catch (_) {}
+                    try { pmrem.dispose(); } catch (_) {}
+                }
+            } catch (_) {}
         }
 
         function setupLights() {
@@ -2055,6 +2205,7 @@
 
             // 3. 根据活跃人数均匀分配角度，并以“我”为中心
             occupied.forEach((seat, orderIdx) => {
+                const meta = gameState.seatMeta?.[seat.seatIdx];
                 const relativeIdx = (orderIdx - myOrderIdx + totalActive) % totalActive;
                 const visualAngle = (relativeIdx / totalActive) * Math.PI * 2;
                 const pos = new THREE.Vector3(Math.sin(visualAngle) * seatRadius, 0.05, Math.cos(visualAngle) * seatRadius);
@@ -2068,6 +2219,7 @@
                 if (seat.type === 'player' && seat.seatIdx === gameState.myPlayerIdx) pName = "YOU";
                 let pChips = gameState.initialChips;
 
+                const decorType = (meta && meta.decor) ? meta.decor : (seatDecor[seat.seatIdx] || 'none');
                 const playerObj = { 
                     id: seat.seatIdx, // 逻辑上的座位ID
                     name: pName, 
@@ -2075,7 +2227,9 @@
                     angle: visualAngle, hand: [], isFolded: false, 
                     meshCards: [], stackGroup: stackGroup,
                     isBankrupt: false,
-                    isAI: seat.type === 'ai'
+                    isAI: seat.type === 'ai',
+                    decorType,
+                    decorMesh: null
                 };
                 gameState.players.push(playerObj);
                 
@@ -2095,6 +2249,7 @@
                 hudData.push({ el: hud, pos: pos.clone().add(new THREE.Vector3(0, 1.5, 0)), seatIdx: seat.seatIdx });
                 
                 updatePlayerStackMesh(playerObj);
+                updatePlayerDecorMesh(playerObj);
             });
         }
 
@@ -2140,6 +2295,572 @@
                     group.add(chipGroup);
                 }
             }
+        }
+
+        function createDecorMesh(type) {
+            const t = String(type || 'none').toLowerCase();
+            if (t === 'none') return null;
+            const g = new THREE.Group();
+
+            if (t === 'cola') {
+                // Short, wide transparent glass filled with dark cola, bubbles, ice, condensation,
+                // lemon slice + metal straw + red logo sticker.
+
+                // Glass material
+                const glassMat = new THREE.MeshPhysicalMaterial({
+                    color: 0xffffff,
+                    roughness: 0.08,
+                    metalness: 0.0,
+                    transmission: 1.0,
+                    thickness: 0.14,
+                    ior: 1.45,
+                    transparent: true,
+                    opacity: 1.0,
+                    depthWrite: false
+                });
+
+                // Glass body (tumbler)
+                const cupOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.14, 0.20, 32), glassMat);
+                cupOuter.position.y = 0.10;
+                g.add(cupOuter);
+                const rim = new THREE.Mesh(new THREE.TorusGeometry(0.158, 0.008, 12, 32), glassMat);
+                rim.rotation.x = Math.PI / 2;
+                rim.position.y = 0.20;
+                g.add(rim);
+
+                // Cola liquid
+                const colaMat = new THREE.MeshStandardMaterial({
+                    color: 0x2a140a,
+                    roughness: 0.35,
+                    metalness: 0.05,
+                    transparent: true,
+                    opacity: 0.90
+                });
+                const cola = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.13, 0.17, 28), colaMat);
+                cola.position.y = 0.095;
+                g.add(cola);
+
+                // Bubbles (small spheres inside top)
+                const bubbleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, roughness: 0.1, metalness: 0.0, depthWrite: false });
+                for (let i = 0; i < 18; i++) {
+                    const br = 0.010 + Math.random() * 0.008;
+                    const b = new THREE.Mesh(new THREE.SphereGeometry(br, 10, 8), bubbleMat);
+                    // Keep bubbles INSIDE the LIQUID volume at their Y (and away from walls)
+                    // cola mesh is CylinderGeometry(top=0.145, bottom=0.13, height=0.17) centered at y=0.095
+                    const colaBottomY = 0.095 - 0.17 / 2; // 0.01
+                    const y = 0.128 + Math.random() * 0.040; // a touch deeper to avoid wall intersection near rim
+                    const tt = Math.min(1, Math.max(0, (y - colaBottomY) / 0.17));
+                    const radiusAtY = (0.13 * (1 - tt)) + (0.145 * tt);
+                    const margin = 0.028; // extra safety margin to prevent visible wall intersection
+                    const maxR = Math.max(0.02, radiusAtY - br - margin);
+                    const r = Math.random() * maxR;
+                    const a = Math.random() * Math.PI * 2;
+                    b.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+                    g.add(b);
+                }
+
+                // Ice cubes
+                const iceMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.15, metalness: 0.0, depthWrite: false });
+                for (let i = 0; i < 4; i++) {
+                    const ice = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.06), iceMat);
+                    ice.position.set((Math.random() - 0.5) * 0.12, 0.12 + Math.random() * 0.03, (Math.random() - 0.5) * 0.12);
+                    ice.rotation.set(Math.random() * 0.6, Math.random() * 0.6, Math.random() * 0.6);
+                    g.add(ice);
+                }
+
+                // Condensation droplets (tiny beads on outer wall)
+                const dropMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.28, roughness: 0.12, metalness: 0.0, depthWrite: false });
+                for (let i = 0; i < 26; i++) {
+                    const d = new THREE.Mesh(new THREE.SphereGeometry(0.008 + Math.random() * 0.006, 10, 8), dropMat);
+                    const a = Math.random() * Math.PI * 2;
+                    const rr = 0.158 + (Math.random() * 0.006);
+                    d.position.set(Math.cos(a) * rr, 0.06 + Math.random() * 0.12, Math.sin(a) * rr);
+                    g.add(d);
+                }
+
+                // Lemon slice (ring + disc w/ segment texture)
+                const lemonOuter = new THREE.MeshStandardMaterial({ color: 0xffe06a, roughness: 0.55, metalness: 0.0 });
+                const lemonCanvas = document.createElement('canvas');
+                lemonCanvas.width = 256; lemonCanvas.height = 256;
+                const lx = lemonCanvas.getContext('2d');
+                lx.clearRect(0, 0, 256, 256);
+                // base
+                const lgrad = lx.createRadialGradient(128, 128, 10, 128, 128, 120);
+                lgrad.addColorStop(0, '#fff9cf');
+                lgrad.addColorStop(0.65, '#fff1a6');
+                lgrad.addColorStop(1, '#ffd86a');
+                lx.fillStyle = lgrad;
+                lx.beginPath(); lx.arc(128, 128, 120, 0, Math.PI * 2); lx.fill();
+                // segment lines
+                lx.strokeStyle = 'rgba(255, 220, 120, 0.9)';
+                lx.lineWidth = 4;
+                for (let i = 0; i < 10; i++) {
+                    const ang = (i / 10) * Math.PI * 2;
+                    lx.beginPath();
+                    lx.moveTo(128, 128);
+                    lx.lineTo(128 + Math.cos(ang) * 118, 128 + Math.sin(ang) * 118);
+                    lx.stroke();
+                }
+                // center pith
+                lx.fillStyle = 'rgba(255,255,255,0.65)';
+                lx.beginPath(); lx.arc(128, 128, 18, 0, Math.PI * 2); lx.fill();
+                const lemonTex = new THREE.CanvasTexture(lemonCanvas);
+                const lemonInner = new THREE.MeshStandardMaterial({ map: lemonTex, roughness: 0.75, metalness: 0.0, transparent: true, opacity: 0.98 });
+                const lemon = new THREE.Group();
+                // Thinner peel ring
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.006, 10, 20), lemonOuter);
+                ring.rotation.x = Math.PI / 2;
+                lemon.add(ring);
+                // Larger inner flesh so the slice doesn't look hollow
+                const disc = new THREE.Mesh(new THREE.CircleGeometry(0.046, 22), lemonInner);
+                disc.rotation.x = -Math.PI / 2;
+                disc.position.y = 0.001;
+                lemon.add(disc);
+                lemon.position.set(0.10, 0.205, 0.02);
+                lemon.rotation.z = -Math.PI / 7;
+                g.add(lemon);
+
+                // Metal straw
+                const metal = new THREE.MeshStandardMaterial({ color: 0xb8c4cf, roughness: 0.22, metalness: 0.95 });
+                const straw = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.26, 16), metal);
+                straw.position.set(0.03, 0.27, 0.02);
+                straw.rotation.z = Math.PI / 14;
+                g.add(straw);
+
+                // Red logo sticker on the side (simple texture)
+                const logoCanvas = document.createElement('canvas');
+                logoCanvas.width = 256; logoCanvas.height = 128;
+                const lc = logoCanvas.getContext('2d');
+                lc.fillStyle = '#d40018';
+                lc.fillRect(0, 0, logoCanvas.width, logoCanvas.height);
+                lc.strokeStyle = 'rgba(255,255,255,0.55)';
+                lc.lineWidth = 6;
+                lc.strokeRect(6, 6, logoCanvas.width - 12, logoCanvas.height - 12);
+                lc.fillStyle = '#ffffff';
+                lc.font = 'bold 44px Arial';
+                lc.textAlign = 'center';
+                lc.textBaseline = 'middle';
+                lc.fillText('CocaCola', 128, 66);
+                const logoTex = new THREE.CanvasTexture(logoCanvas);
+                const sticker = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.16, 0.08),
+                    new THREE.MeshBasicMaterial({ map: logoTex, transparent: true })
+                );
+                sticker.name = 'colaSticker';
+                // Initial position; will be re-positioned to the seat-facing side in updatePlayerDecorMesh()
+                sticker.position.set(-0.155, 0.11, 0.0);
+                g.add(sticker);
+            } else if (t === 'coffee') {
+                // Takeaway cappuccino cup (Starbucks-like): no handle, no saucer; add paper heat sleeve.
+                const paperCup = new THREE.MeshStandardMaterial({
+                    color: 0xf3f0ea,
+                    roughness: 0.92,
+                    metalness: 0.0
+                });
+                const paperInner = new THREE.MeshStandardMaterial({
+                    color: 0xe9e2d8,
+                    roughness: 0.95,
+                    metalness: 0.0
+                });
+                // Cup walls (hollow) - taller takeaway cup
+                const cupH = 0.22;
+                const cupY = 0.14;
+                const cupOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.09, cupH, 28, 1, true), paperCup);
+                cupOuter.position.y = cupY;
+                g.add(cupOuter);
+                const cupInnerMat = paperInner.clone();
+                cupInnerMat.side = THREE.BackSide;
+                const cupInner = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.082, cupH - 0.01, 28, 1, true), cupInnerMat);
+                cupInner.position.y = cupY;
+                g.add(cupInner);
+                const cupBottom = new THREE.Mesh(new THREE.CircleGeometry(0.085, 26), paperInner);
+                cupBottom.rotation.x = -Math.PI / 2;
+                cupBottom.position.y = (cupY - cupH / 2) + 0.01;
+                g.add(cupBottom);
+                const cupLip = new THREE.Mesh(new THREE.TorusGeometry(0.112, 0.006, 10, 30), paperInner);
+                cupLip.rotation.x = Math.PI / 2;
+                cupLip.position.y = cupY + cupH / 2;
+                g.add(cupLip);
+
+                // Paper heat sleeve (kraft w/ ribbing + subtle logo)
+                const sleeveCanvas = document.createElement('canvas');
+                sleeveCanvas.width = 512; sleeveCanvas.height = 256;
+                const sc = sleeveCanvas.getContext('2d');
+                sc.fillStyle = '#b98a55';
+                sc.fillRect(0, 0, 512, 256);
+                // ribbing
+                sc.globalAlpha = 0.18;
+                for (let x = 0; x < 512; x += 10) {
+                    sc.fillStyle = (x % 20 === 0) ? '#9f7346' : '#c79a66';
+                    sc.fillRect(x, 0, 6, 256);
+                }
+                sc.globalAlpha = 1;
+                // logo circle
+                sc.globalAlpha = 0.22;
+                sc.strokeStyle = '#2c2c2c';
+                sc.lineWidth = 10;
+                sc.beginPath(); sc.arc(256, 128, 70, 0, Math.PI * 2); sc.stroke();
+                sc.globalAlpha = 0.18;
+                sc.fillStyle = '#2c2c2c';
+                sc.font = 'bold 34px Arial';
+                sc.textAlign = 'center';
+                sc.textBaseline = 'middle';
+                sc.fillText('COFFEE', 256, 128);
+                sc.globalAlpha = 1;
+
+                const sleeveTex = new THREE.CanvasTexture(sleeveCanvas);
+                try { if ('colorSpace' in sleeveTex && THREE.SRGBColorSpace) sleeveTex.colorSpace = THREE.SRGBColorSpace; } catch (_) {}
+                sleeveTex.wrapS = THREE.RepeatWrapping;
+                sleeveTex.repeat.set(1, 1);
+
+                const sleeveMat = new THREE.MeshStandardMaterial({
+                    map: sleeveTex,
+                    roughness: 0.96,
+                    metalness: 0.0
+                });
+                const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.104, 0.13, 32, 1, true), sleeveMat);
+                sleeve.position.y = cupY - 0.005;
+                g.add(sleeve);
+
+                // cappuccino surface (warm brown + white heart latte art)
+                const cremaCanvas = document.createElement('canvas');
+                cremaCanvas.width = 256; cremaCanvas.height = 256;
+                const cc = cremaCanvas.getContext('2d');
+                // base warm brown gradient
+                const bg = cc.createRadialGradient(128, 110, 12, 128, 128, 140);
+                bg.addColorStop(0, '#b97a45');
+                bg.addColorStop(0.55, '#8a4f2a');
+                bg.addColorStop(1, '#5f331b');
+                cc.fillStyle = bg;
+                cc.fillRect(0, 0, 256, 256);
+
+                // crema ring
+                const rg = cc.createRadialGradient(128, 128, 24, 128, 128, 120);
+                rg.addColorStop(0, 'rgba(255,255,255,0)');
+                rg.addColorStop(0.6, 'rgba(255,255,255,0)');
+                rg.addColorStop(0.78, 'rgba(240, 220, 180, 0.22)');
+                rg.addColorStop(1, 'rgba(240, 220, 180, 0)');
+                cc.fillStyle = rg;
+                cc.beginPath(); cc.arc(128, 128, 120, 0, Math.PI * 2); cc.fill();
+
+                // subtle foam specks (deterministic-ish pattern without animation)
+                for (let i = 0; i < 90; i++) {
+                    const x = 128 + (Math.random() - 0.5) * 160;
+                    const y = 128 + (Math.random() - 0.5) * 160;
+                    const r = 0.8 + Math.random() * 1.6;
+                    cc.fillStyle = `rgba(250, 240, 225, ${0.05 + Math.random() * 0.07})`;
+                    cc.beginPath(); cc.arc(x, y, r, 0, Math.PI * 2); cc.fill();
+                }
+
+                // Heart latte art (white) in center
+                cc.save();
+                cc.translate(128, 132);
+                cc.rotate(-0.06);
+                cc.scale(1.0, 1.0);
+                cc.fillStyle = 'rgba(255,255,255,0.92)';
+                cc.beginPath();
+                // classic heart path
+                cc.moveTo(0, 32);
+                cc.bezierCurveTo(-48, 10, -44, -34, 0, -18);
+                cc.bezierCurveTo(44, -34, 48, 10, 0, 32);
+                cc.closePath();
+                cc.fill();
+                // small tail
+                cc.fillStyle = 'rgba(255,255,255,0.82)';
+                cc.beginPath();
+                cc.moveTo(0, 30);
+                cc.quadraticCurveTo(8, 42, 0, 54);
+                cc.quadraticCurveTo(-8, 42, 0, 30);
+                cc.closePath();
+                cc.fill();
+                cc.restore();
+
+                const cremaTex = new THREE.CanvasTexture(cremaCanvas);
+                // Make heart face the seat (outward). With decor yaw applied, default orientation faces inward.
+                cremaTex.center.set(0.5, 0.5);
+                cremaTex.rotation = Math.PI;
+                const coffee = new THREE.Mesh(
+                    // Fill the cup interior (avoid "hollow ring")
+                    new THREE.CircleGeometry(0.102, 32),
+                    new THREE.MeshStandardMaterial({ map: cremaTex, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
+                );
+                coffee.name = 'coffeeSurface';
+                coffee.rotation.x = -Math.PI / 2;
+                // Slightly below the lip to avoid z-fighting flicker
+                coffee.position.y = (cupY + cupH / 2) - 0.012;
+                g.add(coffee);
+            } else if (t === 'wine') {
+                // Normal open wine glass: lathe profile for proper cup shape; wine has a FLAT surface.
+                const glassMat = new THREE.MeshPhysicalMaterial({
+                    color: 0xffffff,
+                    roughness: 0.035,
+                    metalness: 0.0,
+                    transmission: 1.0,
+                    thickness: 0.16,
+                    ior: 1.5,
+                    reflectivity: 0.55,
+                    clearcoat: 0.25,
+                    clearcoatRoughness: 0.22,
+                    transparent: true,
+                    opacity: 1.0,
+                    depthWrite: false
+                });
+
+                // Glass profile: build a smooth curve from key points, then sample many points for silky lines.
+                const key = [
+                    new THREE.Vector3(0.00, 0.00, 0),
+                    new THREE.Vector3(0.13, 0.00, 0),  // base edge
+                    new THREE.Vector3(0.12, 0.015, 0),
+                    new THREE.Vector3(0.04, 0.02, 0),  // base center bump
+                    new THREE.Vector3(0.02, 0.02, 0),
+                    // stem (tall)
+                    new THREE.Vector3(0.017, 0.18, 0),
+                    new THREE.Vector3(0.018, 0.28, 0),
+                    new THREE.Vector3(0.022, 0.32, 0),
+                    // bowl
+                    new THREE.Vector3(0.055, 0.35, 0),
+                    new THREE.Vector3(0.11, 0.43, 0),
+                    new THREE.Vector3(0.126, 0.52, 0),
+                    new THREE.Vector3(0.115, 0.585, 0),
+                    // rim flare
+                    new THREE.Vector3(0.112, 0.64, 0)
+                ];
+                const curve = new THREE.CatmullRomCurve3(key, false, 'centripetal');
+                const pts = curve.getPoints(60).map(p => new THREE.Vector2(Math.max(0, p.x), p.y));
+                const glassGeo = new THREE.LatheGeometry(pts, 72);
+                const glass = new THREE.Mesh(glassGeo, glassMat);
+                g.add(glass);
+
+                // Wine body: follow bowl shape (not a cone), filled to ~2/3 of bowl height, with a flat surface.
+                const wineMat = new THREE.MeshStandardMaterial({
+                    color: 0x7f0f1a,
+                    roughness: 0.62,
+                    metalness: 0.0,
+                    transparent: true,
+                    opacity: 0.88,
+                    depthWrite: false
+                });
+                // Bowl spans roughly y=0.34 .. y=0.64 (0.30 height). 2/3 fill => +0.20
+                const wineBottomY = 0.355;
+                const wineTopY = 0.555;
+                const margin = 0.010; // keep inside glass wall
+                const wineProfile = [
+                    new THREE.Vector2(0.0, wineBottomY),
+                    new THREE.Vector2(Math.max(0.04, 0.055 - margin), wineBottomY), // bottom of wine
+                    new THREE.Vector2(Math.max(0.06, 0.085 - margin), 0.42),
+                    new THREE.Vector2(Math.max(0.07, 0.100 - margin), 0.49),
+                    new THREE.Vector2(Math.max(0.075, 0.110 - margin), wineTopY)
+                ];
+                const wineGeo = new THREE.LatheGeometry(wineProfile, 44);
+                const wineBody = new THREE.Mesh(wineGeo, wineMat);
+                g.add(wineBody);
+
+                // Flat surface of wine
+                const wineSurface = new THREE.Mesh(
+                    new THREE.CircleGeometry((0.110 - margin) * 0.98, 32),
+                    new THREE.MeshStandardMaterial({ color: 0x7f0f1a, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.92, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })
+                );
+                wineSurface.rotation.x = -Math.PI / 2;
+                // Slightly below the meniscus to avoid z-fighting with glass
+                wineSurface.position.y = wineTopY + 0.0005;
+                g.add(wineSurface);
+            } else if (t === 'cigar') {
+                // Cigar resting on a textured ashtray (no stray planes), with light smoke.
+                const ashtray = new THREE.Group();
+                const ashMat = new THREE.MeshStandardMaterial({ color: 0x2f3136, roughness: 0.55, metalness: 0.18 });
+                const ashInner = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.85, metalness: 0.06 });
+                const trayOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.045, 36), ashMat);
+                trayOuter.position.y = 0.022;
+                ashtray.add(trayOuter);
+                const trayInner = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.03, 32), ashInner);
+                trayInner.position.y = 0.018;
+                ashtray.add(trayInner);
+                // rim
+                const trayRim = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.012, 12, 40), ashMat);
+                trayRim.rotation.x = Math.PI / 2;
+                trayRim.position.y = 0.045;
+                ashtray.add(trayRim);
+                // notches
+                const notchMat = new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 0.6, metalness: 0.14 });
+                for (let k = 0; k < 4; k++) {
+                    const notch = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.022, 0.03), notchMat);
+                    const a = (k / 4) * Math.PI * 2;
+                    notch.position.set(Math.cos(a) * 0.18, 0.05, Math.sin(a) * 0.18);
+                    notch.rotation.y = a;
+                    ashtray.add(notch);
+                }
+                g.add(ashtray);
+
+                const wrapCanvas = document.createElement('canvas');
+                wrapCanvas.width = 512; wrapCanvas.height = 128;
+                const wc = wrapCanvas.getContext('2d');
+                wc.fillStyle = '#6f3f1f';
+                wc.fillRect(0, 0, 512, 128);
+                // wrapper fibers (subtle)
+                for (let i = 0; i < 90; i++) {
+                    wc.strokeStyle = `rgba(0,0,0,${0.06 + Math.random() * 0.06})`;
+                    wc.lineWidth = 1 + Math.random() * 1.2;
+                    const y = Math.random() * 128;
+                    wc.beginPath();
+                    wc.moveTo(0, y);
+                    wc.bezierCurveTo(160, y + (Math.random() - 0.5) * 10, 320, y + (Math.random() - 0.5) * 10, 512, y);
+                    wc.stroke();
+                }
+                const wrapTex = new THREE.CanvasTexture(wrapCanvas);
+                wrapTex.wrapS = THREE.RepeatWrapping;
+                wrapTex.repeat.set(2.2, 1);
+                const wrapperMat = new THREE.MeshStandardMaterial({ map: wrapTex, roughness: 0.78, metalness: 0.08 });
+
+                // Build cigar + band + ends + smoke as ONE grouped object to avoid misalignment.
+                // We align cigar axis to local Z, where +Z points toward table center after decor placement.
+                const cigarGroup = new THREE.Group();
+                cigarGroup.position.set(0.0, 0.075, 0.0); // rests on ashtray
+                cigarGroup.rotation.y = -Math.PI / 10; // slight diagonal on the tray
+                cigarGroup.rotation.z = Math.PI / 22;  // slight roll
+                g.add(cigarGroup);
+
+                const len = 0.34;
+                const half = len / 2;
+                const r = 0.045;
+                const rotX = Math.PI / 2; // cylinder Y -> Z
+
+                const cigarBody = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 24), wrapperMat);
+                cigarBody.rotation.x = rotX;
+                cigarBody.position.set(0.0, 0.0, 0.0);
+                cigarGroup.add(cigarBody);
+
+                // gold band ring (around body)
+                const band = new THREE.Mesh(
+                    new THREE.CylinderGeometry(r + 0.001, r + 0.001, 0.05, 24),
+                    new THREE.MeshStandardMaterial({ color: 0xd6c27b, roughness: 0.26, metalness: 0.25 })
+                );
+                band.rotation.x = rotX;
+                band.position.set(0.0, 0.0, -0.06);
+                cigarGroup.add(band);
+
+                // cut end (near seat/outside) at -Z
+                const cut = new THREE.Mesh(
+                    new THREE.CylinderGeometry(r + 0.001, r + 0.001, 0.012, 24),
+                    new THREE.MeshStandardMaterial({ color: 0x4b2a15, roughness: 0.9, metalness: 0.02 })
+                );
+                cut.rotation.x = rotX;
+                cut.position.set(0.0, 0.0, -half - 0.004);
+                cigarGroup.add(cut);
+
+                // burnt/ash tip (toward table center) at +Z
+                const burnt = new THREE.Mesh(
+                    new THREE.CylinderGeometry(r + 0.002, r + 0.002, 0.022, 24),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1411, roughness: 0.95, metalness: 0.0 })
+                );
+                burnt.rotation.x = rotX;
+                burnt.position.set(0.0, 0.0, half + 0.004);
+                cigarGroup.add(burnt);
+
+                // ember "dots" (fire cores) on the lit end + ash specks
+                const emberMat = new THREE.MeshStandardMaterial({ color: 0xff6a2a, emissive: 0xff3b12, emissiveIntensity: 0.9, roughness: 0.5, metalness: 0.0 });
+                const ashMat2 = new THREE.MeshStandardMaterial({ color: 0x6c6b6d, roughness: 0.98, metalness: 0.02 });
+                for (let i = 0; i < 10; i++) {
+                    const e = new THREE.Mesh(new THREE.SphereGeometry(0.006 + Math.random() * 0.006, 10, 8), emberMat);
+                    const ang = Math.random() * Math.PI * 2;
+                    const rr = Math.random() * (r * 0.55);
+                    e.position.set(Math.cos(ang) * rr, (Math.random() - 0.5) * 0.01, half + 0.02 + Math.random() * 0.01);
+                    cigarGroup.add(e);
+                }
+                for (let i = 0; i < 10; i++) {
+                    const a = new THREE.Mesh(new THREE.SphereGeometry(0.005 + Math.random() * 0.006, 10, 8), ashMat2);
+                    const ang = Math.random() * Math.PI * 2;
+                    const rr = (r * 0.65) + Math.random() * (r * 0.22);
+                    a.position.set(Math.cos(ang) * rr, (Math.random() - 0.5) * 0.012, half + 0.012 + Math.random() * 0.012);
+                    cigarGroup.add(a);
+                }
+
+                // smoke sprite attached to the lit end (prevents offset)
+                const smokeCanvas = document.createElement('canvas');
+                smokeCanvas.width = 128; smokeCanvas.height = 128;
+                const sm = smokeCanvas.getContext('2d');
+                sm.clearRect(0, 0, 128, 128);
+                const sg = sm.createRadialGradient(64, 64, 10, 64, 64, 58);
+                sg.addColorStop(0, 'rgba(220,220,220,0.22)');
+                sg.addColorStop(0.45, 'rgba(220,220,220,0.12)');
+                sg.addColorStop(1, 'rgba(220,220,220,0)');
+                sm.fillStyle = sg;
+                sm.beginPath(); sm.arc(64, 64, 58, 0, Math.PI * 2); sm.fill();
+                const smokeTex = new THREE.CanvasTexture(smokeCanvas);
+                const smokeMat = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, opacity: 0.68, depthWrite: false });
+                const smoke = new THREE.Sprite(smokeMat);
+                smoke.scale.set(0.34, 0.48, 1);
+                smoke.position.set(0.0, 0.14, half + 0.12);
+                cigarGroup.add(smoke);
+            }
+
+            // User-requested: make all props bigger (previously 2.0x, now +1.5x => 3.0x total)
+            try { g.scale.multiplyScalar(3.0); } catch (_) {}
+
+            g.traverse((o) => {
+                if (o && o.isMesh) {
+                    o.castShadow = false;
+                    o.receiveShadow = false;
+                }
+            });
+            return g;
+        }
+
+        function updatePlayerDecorMesh(player) {
+            if (!player) return;
+            const desired = String(player.decorType || 'none').toLowerCase();
+            if (player.decorMesh) {
+                try { tableGroup.remove(player.decorMesh); } catch (_) {}
+                player.decorMesh = null;
+            }
+            if (desired === 'none') return;
+
+            const mesh = createDecorMesh(desired);
+            if (!mesh) return;
+
+            // Place to the RIGHT of the HOLE CARDS, but closer to the seat (farther from table center).
+            // Hole cards are placed at: player.pos + inward * 0.8 (+/- fanOffset). We'll use the center point.
+            const inward = new THREE.Vector3(-Math.sin(player.angle), 0, -Math.cos(player.angle)).normalize();
+            const outward = inward.clone().multiplyScalar(-1);
+            const right = new THREE.Vector3(inward.z, 0, -inward.x).normalize();
+            const holeCenter = player.pos.clone().add(inward.clone().multiplyScalar(0.8));
+            // Move outward (toward seat) and further right for clear separation from cards
+            const base = holeCenter
+                .clone()
+                .add(outward.multiplyScalar(0.70))   // closer to seat / away from center
+                .add(right.multiplyScalar(1.55));   // more to the right
+            // Put props on the table surface (no floating)
+            mesh.position.set(base.x, 0.03, base.z);
+            mesh.rotation.y = player.angle + Math.PI; // roughly face player
+
+            player.decorMesh = mesh;
+            tableGroup.add(mesh);
+
+            // Make cola label face the seat/player (not fixed to "outer side" direction).
+            try {
+                if (desired === 'cola') {
+                    const sticker = mesh.getObjectByName('colaSticker');
+                    if (sticker) {
+                        // Move sticker to the side of the cup that faces the seat (outward from table center),
+                        // and make its FRONT face point at the seat.
+                        const worldStickerY = sticker.getWorldPosition(new THREE.Vector3()).y;
+                        const outward = player.pos.clone().sub(mesh.position);
+                        outward.y = 0;
+                        if (outward.lengthSq() > 1e-6) outward.normalize();
+                        // Convert outward direction into mesh-local XZ (mesh yaw only)
+                        const localOut = outward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -mesh.rotation.y);
+                        const rSticker = 0.158; // approx outer radius of the glass
+                        sticker.position.set(localOut.x * rSticker, sticker.position.y, localOut.z * rSticker);
+                        // Align sticker facing direction to match chip "50" facing direction.
+                        // Chip stacks use rotation.y = player.angle + PI/2; decor mesh uses rotation.y = player.angle + PI.
+                        // So in mesh-local space, sticker should be rotated by -PI/2.
+                        sticker.rotation.set(0, -Math.PI / 2, 0);
+                        // Keep it upright
+                        sticker.rotation.z = 0;
+                        // preserve y (avoid unused var lint in some bundlers)
+                        void worldStickerY;
+                    }
+                }
+            } catch (_) {}
         }
 
         let _chipMatCached = null;
@@ -3062,6 +3783,45 @@
         function setupEvents() {
             window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
 
+            // Decor picker (seat selection)
+            try {
+                const panel = document.getElementById('decor-panel');
+                const sel = document.getElementById('decor-select');
+                const btn = document.getElementById('decor-apply');
+                const updatePanel = () => {
+                    if (!panel) return;
+                    const seated = Number.isInteger(gameState.myPlayerIdx) && gameState.myPlayerIdx >= 0;
+                    panel.style.display = seated ? 'block' : 'none';
+                    if (!seated || !sel) return;
+                    const seatIdx = IS_MULTIPLAYER ? mySeatIdx : gameState.myPlayerIdx;
+                    const current = IS_MULTIPLAYER ? (gameState.seatMeta?.[seatIdx]?.decor || 'none') : (seatDecor[seatIdx] || 'none');
+                    sel.value = current;
+                };
+                updatePanel();
+                // called from multiple places
+                window.__updateDecorPanel = updatePanel;
+
+                if (btn && sel) {
+                    btn.onclick = () => {
+                        const seatIdx = IS_MULTIPLAYER ? mySeatIdx : gameState.myPlayerIdx;
+                        if (!Number.isInteger(seatIdx) || seatIdx < 0) return;
+                        const choice = String(sel.value || 'none');
+                        if (IS_MULTIPLAYER) {
+                            try { socket.emit('set_decor', { decor: choice }); } catch (_) {}
+                        } else {
+                            seatDecor[seatIdx] = choice;
+                            // if already at table, update my mesh now
+                            const me = gameState.players.find(p => p.id === seatIdx);
+                            if (me) {
+                                me.decorType = choice;
+                                updatePlayerDecorMesh(me);
+                            }
+                        }
+                        addToHistory(`${t('decor_set')} ${trDecorChoice(choice)}`);
+                    };
+                }
+            } catch (_) {}
+
             // BGM UI (user gesture required for autoplay policies)
             try {
                 const bgm = document.getElementById('bgm');
@@ -3267,6 +4027,7 @@
                             socket.emit('take_seat', { seatIdx: i });
                             mySeatIdx = i;
                             gameState.myPlayerIdx = i;
+                            try { window.__updateDecorPanel?.(); } catch (_) {}
                         } else {
                             // 取消之前的玩家选座
                             if(gameState.myPlayerIdx !== -1) {
@@ -3275,6 +4036,7 @@
                             gameState.myPlayerIdx = i;
                             gameState.seatConfig[i] = 'player';
                             updateSeatUI();
+                            try { window.__updateDecorPanel?.(); } catch (_) {}
                         }
                     };
 

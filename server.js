@@ -194,8 +194,9 @@ async function emitMatchOverAndEnterClosing(room, reason) {
 
 function seatToPublic(seat, seatIdx) {
   if (!seat) return null;
-  if (seat.type === "ai") return { type: "ai", seatIdx, name: seat.name };
-  return { type: "player", seatIdx, name: seat.name };
+  const decor = seat.decor || "none";
+  if (seat.type === "ai") return { type: "ai", seatIdx, name: seat.name, decor };
+  return { type: "player", seatIdx, name: seat.name, decor };
 }
 
 function getRoomSummary(room, forSocketId) {
@@ -225,6 +226,12 @@ function getPlayer(room, seatIdx) {
 function isSeatEligible(room, seatIdx) {
   const seat = room.seats[seatIdx];
   if (!seat) return false;
+  // Disconnected player seats are not eligible (prevents SB/BB/turn from stalling on offline players).
+  if (seat.type === "player") {
+    const sid = seat.socketId;
+    const online = !!sid && io.sockets.sockets.has(sid);
+    if (!online) return false;
+  }
   const p = getPlayer(room, seatIdx);
   if (!p) return false;
   const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
@@ -236,6 +243,11 @@ function getInHandSeats(room) {
   for (let i = 0; i < SEATS; i++) {
     const seat = room.seats[i];
     if (!seat) continue;
+    if (seat.type === "player") {
+      const sid = seat.socketId;
+      const online = !!sid && io.sockets.sockets.has(sid);
+      if (!online) continue;
+    }
     const p = getPlayer(room, i);
     if (!p) continue;
     const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
@@ -249,6 +261,11 @@ function getActableSeats(room) {
   for (let i = 0; i < SEATS; i++) {
     const seat = room.seats[i];
     if (!seat) continue;
+    if (seat.type === "player") {
+      const sid = seat.socketId;
+      const online = !!sid && io.sockets.sockets.has(sid);
+      if (!online) continue;
+    }
     const p = getPlayer(room, i);
     if (!p) continue;
     const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
@@ -440,7 +457,12 @@ function resetHand(room) {
     p.hand = [];
     p.currentBet = 0;
     const sitOut = Number.isFinite(p.sitOutUntilHand) && p.sitOutUntilHand > room.handNum;
-    p.isFolded = p.chips <= 0 || sitOut;
+    const seat = room.seats[seatIdx];
+    const disconnected =
+      seat &&
+      seat.type === "player" &&
+      (!seat.socketId || !io.sockets.sockets.has(seat.socketId));
+    p.isFolded = p.chips <= 0 || sitOut || disconnected;
     p.isBankrupt = p.chips <= 0;
   }
 }
@@ -965,6 +987,7 @@ io.on("connection", (socket) => {
       room.seats[reconnectSeatIdx].name = nm;
       if (cid) room.seats[reconnectSeatIdx].clientId = cid;
       room.seats[reconnectSeatIdx].disconnectedAt = null;
+      if (!room.seats[reconnectSeatIdx].decor) room.seats[reconnectSeatIdx].decor = "none";
       socket.data.seatIdx = reconnectSeatIdx;
     }
     // host 选举：如果没有 host 或 host socket 已不在线，则把当前加入者设为 host
@@ -1061,7 +1084,7 @@ io.on("connection", (socket) => {
       if (s && s.type === "player" && s.socketId === socket.id) room.seats[i] = null;
     }
 
-    room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player", clientId: socket.data.clientId || null, disconnectedAt: null };
+    room.seats[idx] = { type: "player", socketId: socket.id, name: socket.data.name || "Player", clientId: socket.data.clientId || null, disconnectedAt: null, decor: "none" };
     socket.data.seatIdx = idx;
     socket.emit("seat_taken", { seatIdx: idx });
     emitYouState(room);
@@ -1213,6 +1236,27 @@ io.on("connection", (socket) => {
     p.pendingRebuy = Number(p.pendingRebuy || 0) + amt;
     p.totalBuyIn = Number(p.totalBuyIn || (Number.isFinite(room.initialChips) ? room.initialChips : 1000)) + amt;
     broadcastActivity(room, `${seat.name} rebuys $${amt} (applies next hand).`);
+    broadcastGame(room);
+  });
+
+  // ---- Table decor (cosmetic) ----
+  socket.on("set_decor", ({ decor }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || room.closing) return;
+    const seatIdx = socket.data.seatIdx;
+    if (!Number.isInteger(seatIdx) || seatIdx < 0 || seatIdx >= SEATS) return;
+    const seat = room.seats[seatIdx];
+    if (!seat || seat.type !== "player") return;
+    if (seat.socketId !== socket.id) return;
+
+    const d = String(decor || "none").toLowerCase();
+    const allowed = new Set(["none", "cola", "coffee", "wine", "cigar"]);
+    if (!allowed.has(d)) return;
+    seat.decor = d;
+    room.lastActiveAt = now();
+    broadcastRoom(room);
     broadcastGame(room);
   });
 
