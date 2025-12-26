@@ -240,6 +240,7 @@
             <div style="margin-top: 10px;">
                 <button id="bgm-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">BGM: Off</button>
                 <button id="sfx-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">SFX: On</button>
+                <button id="lang-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Language: EN</button>
                 <button id="mic-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Mic: Off</button>
                 <div id="voice-status" style="font-size: 0.78em; opacity: 0.75; margin-top: 6px; text-align: left;">Voice: Not connected</div>
             </div>
@@ -327,6 +328,32 @@
         let matchOverAcked = false;
         let opponentPlaceholderToken = 0;
         let lastOpponentPlaceholderHandNum = null;
+        let UI_LANG = localStorage.getItem('nebula_lang') || 'en';
+        function t(key) {
+            const dict = {
+                en: {
+                    lang_label: 'Language: EN',
+                    final_standings: 'Final Standings',
+                    hand_results: 'Hand Results',
+                    buy_in: 'Buy-in',
+                    chips: 'Chips',
+                    net: 'Net',
+                    win: 'Win',
+                    loss: 'Loss'
+                },
+                zh: {
+                    lang_label: 'Language: 中文',
+                    final_standings: '最终结算',
+                    hand_results: '每手结果',
+                    buy_in: '本金',
+                    chips: '剩余',
+                    net: '净赢亏',
+                    win: '赚',
+                    loss: '亏'
+                }
+            };
+            return (dict[UI_LANG] && dict[UI_LANG][key]) || (dict.en[key] || key);
+        }
 
         // --- SFX (WebAudio, no external assets required) ---
         const SFX = (() => {
@@ -335,6 +362,8 @@
             let lastDealAt = 0;
             let lastChipAt = 0;
             let lastTurnAt = 0;
+            let lastFoldAt = 0;
+            let lastRattleAt = 0;
 
             const ensureCtx = async () => {
                 if (!enabled) return null;
@@ -381,16 +410,9 @@
                 n.stop(t + 0.11);
             };
 
-            const playChip = async () => {
-                if (!enabled) return;
-                const tnow = performance.now();
-                if (tnow - lastChipAt < 85) return; // throttle
-                lastChipAt = tnow;
-                const c = await ensureCtx();
-                if (!c) return;
-
-                const t = c.currentTime;
+            const clinkRaw = (t) => {
                 // Coin/chip clink: short noise burst + resonant peaks (less "synthy")
+                const c = ctx;
                 const n = c.createBufferSource();
                 n.buffer = noiseBuffer();
 
@@ -425,6 +447,59 @@
                 n.stop(t + 0.14);
                 o.start(t);
                 o.stop(t + 0.11);
+            };
+
+            const playChip = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastChipAt < 85) return; // throttle
+                lastChipAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+
+                clinkRaw(c.currentTime);
+            };
+
+            const playFold = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastFoldAt < 220) return;
+                lastFoldAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+                const t = c.currentTime;
+
+                // "burn/vanish" whoosh: noise with sweeping lowpass and quick decay
+                const n = c.createBufferSource();
+                n.buffer = noiseBuffer();
+                const lp = c.createBiquadFilter();
+                lp.type = 'lowpass';
+                lp.frequency.setValueAtTime(5200, t);
+                lp.frequency.exponentialRampToValueAtTime(900, t + 0.18);
+                lp.Q.setValueAtTime(0.9, t);
+                const g = c.createGain();
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+                n.connect(lp).connect(g).connect(c.destination);
+                n.start(t);
+                n.stop(t + 0.24);
+            };
+
+            const playRattle = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastRattleAt < 500) return;
+                lastRattleAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+                const t = c.currentTime;
+                // multiple clinks in a short burst (pot pushed to winner)
+                const hits = 7;
+                for (let i = 0; i < hits; i++) {
+                    const dt = 0.02 + i * (0.03 + Math.random() * 0.02);
+                    try { clinkRaw(t + dt); } catch (_) {}
+                }
             };
 
             const playTurn = async () => {
@@ -465,7 +540,9 @@
                 ensureCtx,
                 deal: playDeal,
                 chip: playChip,
-                turn: playTurn
+                turn: playTurn,
+                fold: playFold,
+                rattle: playRattle
             };
         })();
 
@@ -936,7 +1013,7 @@
 
                     const sec1 = document.createElement('div');
                     sec1.style.cssText = 'text-align:left;margin-bottom:14px;color:rgba(212,175,55,0.8);font-weight:bold;';
-                    sec1.innerText = 'Final Standings';
+                    sec1.innerText = t('final_standings');
                     list.appendChild(sec1);
 
                     safeStandings.forEach((p, idx) => {
@@ -947,12 +1024,12 @@
                                     : (Number.isFinite(Number(p.totalBuyIn)) ? Number(p.totalBuyIn) : 0));
                         const net = Number.isFinite(Number(p.net)) ? Number(p.net) : (Number(p.chips || 0) - buyIn);
                         const netColor = net >= 0 ? '#00ff88' : '#ff6677';
-                        const netSign = net >= 0 ? '+' : '-';
+                        const netWord = net >= 0 ? t('win') : t('loss');
                         div.innerHTML = `
                             <span style="color:#fff;flex:1;">${idx + 1}. ${p.name || 'Player'} (ID:${p.seatIdx})</span>
-                            <span style="min-width:120px; text-align:right; opacity:0.9;">本金 $${buyIn}</span>
-                            <span style="min-width:120px; text-align:right;"><b>剩余 $${Number(p.chips || 0)}</b></span>
-                            <span style="min-width:120px; text-align:right; color:${netColor}; font-weight:bold;">${net >= 0 ? '赚' : '亏'} $${Math.abs(net)}</span>
+                            <span style="min-width:140px; text-align:right; opacity:0.9;">${t('buy_in')} $${buyIn}</span>
+                            <span style="min-width:140px; text-align:right;"><b>${t('chips')} $${Number(p.chips || 0)}</b></span>
+                            <span style="min-width:140px; text-align:right; color:${netColor}; font-weight:bold;">${netWord} $${Math.abs(net)}</span>
                         `;
                         list.appendChild(div);
                     });
@@ -965,7 +1042,7 @@
                     sec2.style.cssText = 'text-align:left;margin-bottom:10px;color:rgba(212,175,55,0.8);font-weight:bold;';
                     const sched = Number.isFinite(Number(scheduledHands)) ? Number(scheduledHands) : Number(totalHands || safeHands.length);
                     const played = Number.isFinite(Number(playedHands)) ? Number(playedHands) : safeHands.length;
-                    sec2.innerText = `Hand Results (${played}/${sched})`;
+                    sec2.innerText = `${t('hand_results')} (${played}/${sched})`;
                     list.appendChild(sec2);
 
                     safeHands.sort((a,b) => (a.handNum||0)-(b.handNum||0)).forEach(h => {
@@ -1065,18 +1142,16 @@
                     const myChips = meS ? Number(meS.chips || 0) : 0;
                     const toCall = meS ? Math.max(0, maxBet - myBet) : 0;
                     const callPay = Math.max(0, Math.min(toCall, myChips));
-                    // Buttons: first bettor sees "Bet"; others see unified "Call/Raise".
                     if (btnCheck) {
-                        btnCheck.innerText = 'Check';
-                        btnCheck.style.display = (toCall > 0) ? 'none' : 'block';
+                        btnCheck.innerText = (toCall > 0)
+                            ? `Call $${callPay}${(myChips > 0 && myChips < toCall) ? ' (All-in)' : ''}`
+                            : 'Check';
+                        btnCheck.style.display = 'block';
                     }
                     const btnRaise = document.getElementById('btn-raise');
                     if (btnRaise) {
                         if (toCall > 0) {
-                            const extra = Number(currentRaiseInput || 0);
-                            btnRaise.innerText = (extra <= 0)
-                                ? `Call $${callPay}${(myChips > 0 && myChips < toCall) ? ' (All-in)' : ''}`
-                                : `Raise +$${extra}`;
+                            btnRaise.innerText = `Raise +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
                         } else {
                             const betAmt = Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0) || 0);
                             btnRaise.innerText = `Bet $${betAmt}`;
@@ -1176,18 +1251,30 @@
                     if (mySeatIdx !== -1) applyPrivateHandIfReady(mySeatIdx);
                 }
 
-                // 同步公共牌：只补差量（最多 5 张）
+                // 同步公共牌：只补差量（最多 5 张），逐张“翻出”动画（先背面落下 -> 翻正面）
                 const target = Array.isArray(s.communityCards) ? s.communityCards.slice(0, 5) : [];
                 while(gameState.communityCards.length < target.length) {
                     const card = target[gameState.communityCards.length];
                     gameState.communityCards.push(card);
-                    // 直接在桌面渲染一张（不走本地逻辑）
-                    const mesh = createCardMesh(card, true);
                     const finalX = (gameState.communityCards.length-3)*0.9;
+                    // start facedown, then flip reveal
+                    const mesh = createCardMesh(card, false);
                     mesh.position.set(finalX, 5, 0);
                     cardsGroup.add(mesh);
-                    orientCardTowardViewer(mesh, mySeatIdx);
-                    gsap.to(mesh.position, {y: 0.18, duration: 0.5, ease: "power2.out"});
+                    // community cards: keep flat (no tilt toward player)
+                    mesh.rotation.order = 'YXZ';
+                    mesh.rotation.set(0, 0, 0);
+                    try { SFX.deal(); } catch (_) {}
+                    // float above felt (no "on felt" placement)
+                    gsap.to(mesh.position, { y: 0.18, duration: 0.55, ease: "power2.out" });
+                    // flip after landing
+                    setTimeout(() => {
+                        try {
+                            revealCardOnMesh(mesh, card);
+                            mesh.rotation.order = 'YXZ';
+                            mesh.rotation.set(0, 0, 0);
+                        } catch (_) {}
+                    }, 420);
                 }
             });
 
@@ -1325,7 +1412,8 @@
                 chip.material.opacity = 0.7;
                 chip.position.set(p.pos.x, 0.08, p.pos.z);
                 // 让筹码“平躺”在桌面（和离线一致）：Cylinder 默认就是平躺（圆面朝上）
-                chip.rotation.set(0, p.angle || 0, 0); // keep label oriented to that seat
+                // keep label oriented to that seat (+90deg correction for cap UV)
+                chip.rotation.set(0, (p.angle || 0) + Math.PI / 2, 0);
                 chipsGroup.add(chip);
                 potChipFX.push(chip);
 
@@ -1351,7 +1439,7 @@
             if (!Array.isArray(winners) || winners.length === 0) return;
             if (!potChipFX || potChipFX.length === 0) return;
 
-            try { SFX.chip(); } catch (_) {}
+            try { SFX.rattle(); } catch (_) {}
 
             const winnerSeats = winners.map(w => w.seatIdx).filter(s => Number.isInteger(s));
             if (winnerSeats.length === 0) return;
@@ -1744,8 +1832,9 @@
                     const jx = (Math.random() - 0.5) * 0.012;
                     const jz = (Math.random() - 0.5) * 0.012;
                     chipGroup.position.set(ox + jx, j * 0.055, oz + jz);
-                    // Orient chip label ("50") to face the seat direction
-                    chipGroup.rotation.y = player.angle;
+                    // Orient chip label ("50") to face the seat direction.
+                    // Note: top-face UV on Cylinder caps is rotated vs world axes, so we add a +90deg correction.
+                    chipGroup.rotation.y = player.angle + Math.PI / 2;
                     
                     // Bright solid chip with texture (PokerNow-like readability)
                     const chipBody = new THREE.Mesh(
@@ -2169,6 +2258,7 @@
         }
 
         function createFoldParticles(player) {
+            try { SFX.fold(); } catch (_) {}
             player.meshCards.forEach(mesh => {
                 const pos = mesh.position.clone();
                 const rot = mesh.rotation.clone();
@@ -2233,24 +2323,28 @@
                 gameState.numActionThisRound = 0; 
             }
             
-            // 简单的筹码实体，用于下注动画
-            const chip = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
-                getChipMaterial().clone()
-            );
-            chip.material.transparent = true;
-            chip.material.opacity = 0.85;
-            chip.position.copy(p.pos);
-            chip.position.y = 0.1;
-            chipsGroup.add(chip);
-            
-            gsap.to(chip.position, { 
-                x: (Math.random() - 0.5) * 2, 
-                y: 0.05, 
-                z: (Math.random() - 0.5) * 2, 
-                duration: 0.6,
-                ease: "power2.out"
-            });
+            // 下注动画：根据下注金额生成对应数量筹码（而不是永远 1 个）
+            const chipCount = Math.max(1, Math.min(18, Math.floor((Number.isFinite(realAmt) ? realAmt : 50) / CONFIG.chipValue)));
+            for (let i = 0; i < chipCount; i++) {
+                const chip = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
+                    getChipMaterial().clone()
+                );
+                chip.material.transparent = true;
+                chip.material.opacity = 0.85;
+                chip.position.copy(p.pos);
+                chip.position.y = 0.08;
+                // keep label oriented to that seat (+90deg correction for cap UV)
+                chip.rotation.set(0, (p.angle || 0) + Math.PI / 2, 0);
+                chipsGroup.add(chip);
+                gsap.to(chip.position, {
+                    x: (Math.random() - 0.5) * 2,
+                    y: 0.05,
+                    z: (Math.random() - 0.5) * 2,
+                    duration: 0.65 + Math.random() * 0.12,
+                    ease: "power2.out"
+                });
+            }
             updateUI();
         }
 
@@ -2418,24 +2512,22 @@
             for(let i=0; i<n; i++) {
                 const card = gameState.deck.pop();
                 gameState.communityCards.push(card);
-                const mesh = createCardMesh(card, true);
+                const mesh = createCardMesh(card, false);
                 mesh.position.set(0, 5, 0);
                 mesh.rotation.order = 'YXZ';
                 mesh.rotation.set(0, 0, 0);
                 cardsGroup.add(mesh);
-                // 社区牌：朝当前玩家（YOU）方向旋转 + 轻微倾斜，方便读牌
+                try { SFX.deal(); } catch (_) {}
+                // 社区牌：悬浮平躺在桌面上方（不朝当前玩家倾斜）
                 const finalX = (gameState.communityCards.length-3)*0.9;
                 gsap.to(mesh.position, { x: finalX, y: 0.18, z: 0, duration: 0.7, ease: "power2.out" });
+                // reveal after landing
+                await new Promise(r => setTimeout(r, 420));
                 try {
-                    const viewer = gameState.players.find(p => p.id === gameState.myPlayerIdx);
-                    const ref = (viewer && viewer.stackGroup?.position) ? viewer.stackGroup.position : (viewer?.pos || camera?.position);
-                    const dx = ref.x - finalX;
-                    const dz = ref.z - 0;
-                    const yaw = Math.atan2(dx, dz);
-                    gsap.to(mesh.rotation, { x: 0.28, y: yaw, z: 0, duration: 0.7, ease: "power2.out" });
-                } catch (_) {
-                    gsap.to(mesh.rotation, { x: 0.28, y: 0, z: 0, duration: 0.7, ease: "power2.out" });
-                }
+                    revealCardOnMesh(mesh, card);
+                    mesh.rotation.order = 'YXZ';
+                    mesh.rotation.set(0, 0, 0);
+                } catch (_) {}
                 await new Promise(r => setTimeout(r, 200));
             }
         }
@@ -2537,6 +2629,7 @@
             if (activePlayers.length === 1) {
                 const p = activePlayers[0];
                 addToHistory(`Game Over. ${p.name} wins (all others folded)!`);
+                try { SFX.rattle(); } catch (_) {}
 
                 // 将所有筹码移动到赢家位置，且贴近桌面
                 chipsGroup.children.forEach(chip => {
@@ -2596,6 +2689,7 @@
                         ease: "power2.inOut"
                     });
                 });
+                if (idx === 0) { try { SFX.rattle(); } catch (_) {} }
 
                 // 延迟更新UI，等动画结束
                 setTimeout(() => {
@@ -2634,15 +2728,14 @@
                 const toCall = me ? Math.max(0, Number(gameState.currentMaxBet || 0) - Number(me.currentBet || 0)) : 0;
                 const callPay = me ? Math.max(0, Math.min(toCall, Number(me.chips || 0))) : 0;
                 if (btnCheck && !IS_MULTIPLAYER) {
-                    btnCheck.innerText = 'Check';
-                    btnCheck.style.display = (toCall > 0) ? 'none' : 'block';
+                    btnCheck.innerText = (toCall > 0)
+                        ? `Call $${callPay}${(me && Number(me.chips || 0) > 0 && Number(me.chips || 0) < toCall) ? ' (All-in)' : ''}`
+                        : 'Check';
+                    btnCheck.style.display = 'block';
                 }
                 if (btnRaise && !IS_MULTIPLAYER) {
                     if (toCall > 0) {
-                        const extra = Number(currentRaiseInput || 0);
-                        btnRaise.innerText = (extra <= 0)
-                            ? `Call $${callPay}${(me && Number(me.chips || 0) > 0 && Number(me.chips || 0) < toCall) ? ' (All-in)' : ''}`
-                            : `Raise +$${extra}`;
+                        btnRaise.innerText = `Raise +$${Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0))}`;
                     } else {
                         const betAmt = Math.max(Number(gameState.minRaise || 50), Number(currentRaiseInput || 0) || 0);
                         btnRaise.innerText = `Bet $${betAmt}`;
@@ -2755,6 +2848,20 @@
                             // small confirmation blip
                             try { SFX.turn(); } catch (_) {}
                         }
+                    };
+                }
+            } catch (_) {}
+
+            // Language toggle (EN / 中文)
+            try {
+                const langBtn = document.getElementById('lang-toggle');
+                const applyLang = () => { if (langBtn) langBtn.innerText = t('lang_label'); };
+                applyLang();
+                if (langBtn) {
+                    langBtn.onclick = () => {
+                        UI_LANG = (UI_LANG === 'en') ? 'zh' : 'en';
+                        localStorage.setItem('nebula_lang', UI_LANG);
+                        applyLang();
                     };
                 }
             } catch (_) {}
@@ -2982,8 +3089,7 @@
             
             document.getElementById('btn-plus').onclick = () => { currentRaiseInput += gameState.minRaise; updateUI(); };
             document.getElementById('btn-minus').onclick = () => {
-                // allow 0 so "Raise" button can become "Call" when facing a bet
-                if (currentRaiseInput > 0) currentRaiseInput = Math.max(0, currentRaiseInput - gameState.minRaise);
+                if (currentRaiseInput > gameState.minRaise) currentRaiseInput = Math.max(gameState.minRaise, currentRaiseInput - gameState.minRaise);
                 updateUI();
             };
             
@@ -3005,10 +3111,7 @@
                 const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
                 if(!me) return;
                 if (IS_MULTIPLAYER) {
-                    // Only meaningful when toCall==0; if facing a bet, "Call" is handled by the Bet/Raise button.
-                    const callAmt = gameState.currentMaxBet - me.currentBet;
-                    if (callAmt > 0) { toggleButtons(true); return; }
-                    socket.emit('action', { type: 'call' }); // server decides check
+                    socket.emit('action', { type: 'call' }); // server decides call vs check
                 } else {
                     const callAmt = gameState.currentMaxBet - me.currentBet;
                 if (callAmt > 0) {
@@ -3025,30 +3128,16 @@
                 const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
                 if(!me) return;
                 if (IS_MULTIPLAYER) {
-                    // Unified BET/RAISE/CALL:
-                    // - if facing a bet and extra==0 => CALL
-                    // - if facing a bet and extra>0 => RAISE (by extra)
-                    // - if no bet yet => BET (by extra; must be >= minRaise)
-                    const callAmt = Math.max(0, Number(gameState.currentMaxBet || 0) - Number(me.currentBet || 0));
-                    const extra = Number(currentRaiseInput || 0);
-                    if (callAmt > 0 && extra <= 0) {
-                        socket.emit('action', { type: 'call' });
-                    } else {
-                        const min = Number(gameState.minRaise || 50);
-                        const raiseBy = Math.max(min, extra);
-                        socket.emit('action', { type: 'raise', raiseBy });
-                    }
+                    // Bet/Raise unified:
+                    // - if no bet yet => BET (raiseBy)
+                    // - if facing a bet => RAISE more (raiseBy)
+                    const min = Number(gameState.minRaise || 50);
+                    const raiseBy = Math.max(min, Number(currentRaiseInput || 0));
+                    socket.emit('action', { type: 'raise', raiseBy });
                 } else {
                     const callAmt = gameState.currentMaxBet - me.currentBet;
-                    const extra = Number(currentRaiseInput || 0);
-                    if (callAmt > 0 && extra <= 0) {
-                        placeBet(me.id, Math.min(callAmt, me.chips));
-                        addToHistory(`You Called $${Math.min(callAmt, me.currentBet)}.`);
-                        nextStep();
-                        return;
-                    }
                     const min = Number(gameState.minRaise || 50);
-                    const raiseBy = Math.max(min, extra);
+                    const raiseBy = Math.max(min, Number(currentRaiseInput || 0));
                     const totalRaise = callAmt + raiseBy;
                     placeBet(me.id, totalRaise);
                     addToHistory(callAmt > 0 ? `You Raised $${raiseBy} (Total $${me.currentBet}).` : `You Bet $${raiseBy}.`);
