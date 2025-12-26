@@ -15,32 +15,30 @@
             --btn-text: #d4af37;
             --accent: #d4af37;
             --rules-bg: rgba(10, 5, 2, 0.85);
+            --btn-hover-bg: rgba(212, 175, 55, 0.2);
+            --btn-hover-shadow: rgba(212, 175, 55, 0.3);
         }
         [data-theme="light"] {
-            /* warm daylight (soft orange glow), not pure white */
-            --bg: #fff0db;
-            --text: #2a1a06;
-            --panel-bg: rgba(255, 242, 220, 0.78);
-            --panel-border: rgba(140, 90, 10, 0.18);
-            --btn-bg: rgba(255, 247, 232, 0.88);
-            --btn-border: rgba(140, 90, 10, 0.22);
-            --btn-text: #3a2a00;
-            --accent: #b07d10;
-            --rules-bg: rgba(255, 245, 228, 0.92);
+            /* PokerNow-like "classic" UI: clean white/gray panels + red/black cards */
+            --bg: #f4f6f8;
+            --text: #101418;
+            --panel-bg: rgba(255, 255, 255, 0.92);
+            --panel-border: rgba(16, 20, 24, 0.12);
+            --btn-bg: rgba(255, 255, 255, 0.96);
+            --btn-border: rgba(16, 20, 24, 0.18);
+            --btn-text: #101418;
+            --accent: #1b8a3a;
+            --rules-bg: rgba(255, 255, 255, 0.96);
+            --btn-hover-bg: rgba(16, 20, 24, 0.06);
+            --btn-hover-shadow: rgba(16, 20, 24, 0.10);
         }
 
         body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); }
-        /* Casino-style luxe background (CSS-only, no external image) for light mode */
+        /* Classic clean background for light mode */
         [data-theme="light"] body {
             background-color: var(--bg);
-            background-image:
-                radial-gradient(1200px 800px at 20% 15%, rgba(255, 200, 110, 0.55), rgba(255, 200, 110, 0.0) 60%),
-                radial-gradient(900px 700px at 85% 25%, rgba(255, 170, 70, 0.45), rgba(255, 170, 70, 0.0) 60%),
-                radial-gradient(700px 600px at 65% 85%, rgba(180, 120, 30, 0.35), rgba(180, 120, 30, 0.0) 62%),
-                radial-gradient(420px 380px at 35% 60%, rgba(255, 240, 210, 0.35), rgba(255, 240, 210, 0.0) 70%),
-                repeating-linear-gradient(115deg, rgba(140, 90, 10, 0.08) 0 2px, rgba(255,255,255,0.0) 2px 14px),
-                linear-gradient(180deg, rgba(40, 20, 5, 0.10), rgba(255, 240, 219, 0.0) 40%, rgba(40, 20, 5, 0.10));
-            background-blend-mode: screen, screen, screen, screen, overlay, normal;
+            background-image: radial-gradient(900px 600px at 30% 20%, rgba(255,255,255,0.9), rgba(255,255,255,0.0) 60%),
+                              radial-gradient(900px 600px at 80% 60%, rgba(255,255,255,0.8), rgba(255,255,255,0.0) 60%);
         }
         #container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
@@ -71,8 +69,8 @@
         .panel { background: var(--panel-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--panel-border); margin-bottom: 10px; pointer-events: auto; backdrop-filter: blur(25px); box-shadow: 0 0 40px rgba(0,0,0,0.35); }
         
         /* Rules Modal */
-        #rules-btn { position: relative; z-index: 20; background: rgba(212, 175, 55, 0.2); border: 1px solid rgba(212, 175, 55, 0.5); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
-        #rules-btn:hover { background: rgba(212, 175, 55, 0.4); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+        #rules-btn { position: relative; z-index: 20; background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--btn-text); padding: 8px 15px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; pointer-events: auto; }
+        #rules-btn:hover { background: var(--btn-hover-bg); box-shadow: 0 0 15px var(--btn-hover-shadow); }
         /* Rules panel: appears directly under the Rules button (inside the ui panel) */
         #rules-modal { display: none; position: absolute; top: 100%; left: 0; margin-top: 10px; transform: none; background: var(--rules-bg); border: 1px solid rgba(255, 215, 0, 0.35); padding: 16px 16px 10px; border-radius: 15px; z-index: 100; width: 380px; max-height: calc(100vh - 240px); overflow-y: auto; backdrop-filter: blur(14px); color: var(--text); box-shadow: 0 0 35px rgba(0,0,0,0.18); }
         #rules-modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
@@ -96,7 +94,7 @@
             color: var(--btn-text); font-weight: bold; border-radius: 6px; cursor: pointer; 
             transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; min-width: 80px;
         }
-        .touch-btn:hover:not(:disabled) { background: rgba(212, 175, 55, 0.2); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
+        .touch-btn:hover:not(:disabled) { background: var(--btn-hover-bg); box-shadow: 0 0 20px var(--btn-hover-shadow); }
         .touch-btn:disabled { opacity: 0.1; cursor: not-allowed; }
         
         .adjust-panel { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.18); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.12); }
@@ -107,7 +105,7 @@
         
         .player-hud { position: absolute; pointer-events: none; transform: translate(-50%, -100%); text-align: center; }
         .chip-display { color: var(--text); font-size: 13px; margin-top: 3px; font-weight: bold; text-shadow: 0 0 15px rgba(0,0,0,0.25); }
-        #game-msg { font-size: 1.1em; color: #ffd1b3; text-align: left; letter-spacing: 2px; }
+        #game-msg { font-size: 1.1em; color: var(--text); text-align: left; letter-spacing: 2px; }
 
         #theme-toggle {
             margin: 10px auto 0;
@@ -160,7 +158,7 @@
         <h2 style="color: gold;">HAND OVER</h2>
         <p style="color: rgba(212, 175, 55, 0.6);">Final Chip Standings</p>
         <div class="summary-list" id="summary-list-content"></div>
-        <button onclick="location.reload()" class="lobby-btn">Back to Lobby</button>
+        <button id="summary-confirm-btn" class="lobby-btn">Confirm Results & Back to Lobby</button>
     </div>
 
     <div id="container"></div>
@@ -232,7 +230,7 @@
             </div>
         </div>
     </div>
-
+    
     <div id="ui-overlay">
         <div class="panel" style="width: 260px; margin-left: 0;">
             <div id="game-msg">WAITING</div>
@@ -240,12 +238,16 @@
             <button id="rules-btn" style="margin: 10px auto 0; display: block;">Rules & Rankings</button>
             <button id="theme-toggle">Night Mode</button>
             <div style="margin-top: 10px;">
+                <button id="bgm-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">BGM: Off</button>
+                <button id="sfx-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">SFX: On</button>
                 <button id="mic-toggle" class="touch-btn" style="width:100%; padding: 10px 12px; font-size: 0.9em;">Mic: Off</button>
                 <div id="voice-status" style="font-size: 0.78em; opacity: 0.75; margin-top: 6px; text-align: left;">Voice: Not connected</div>
             </div>
             <div id="rules-modal-anchor"></div>
         </div>
     </div>
+
+    <audio id="bgm" src="Love_Me.mp3" loop preload="auto"></audio>
 
     <div id="history-panel" class="panel">
         <h3 style="margin: 0 0 10px 0; font-size: 0.9em; color: rgba(212, 175, 55, 0.6);">ACTIVITY</h3>
@@ -262,6 +264,7 @@
         </div>
         <button id="btn-raise" class="touch-btn">Raise</button>
         <button id="btn-allin" class="touch-btn" style="color:#ff4444;">All-in</button>
+        <button id="btn-rebuy" class="touch-btn" style="display:none;">Rebuy</button>
         <button id="btn-next" class="touch-btn">Confirm & Next Round</button>
     </div>
 
@@ -297,6 +300,8 @@
 
         let scene, camera, renderer, controls;
         let cardsGroup, chipsGroup, tableGroup, environmentGroup, playerStacksGroup;
+        let whiteSpot = null;
+        let rimLight = null;
         let nebulaParticles = null;
         let starField = null;
         let tableParticles = null;
@@ -315,10 +320,154 @@
         const pendingPrivateHands = new Map(); // seatIdx -> hand
         const privateHandRenderToken = new Map(); // seatIdx -> number (cancel in-flight renders)
         let lastActionSeatIdx = null;
+        let rebuyPromptedForHand = null;
         let lastHandOverNum = null;
         let potChipFX = []; // meshes for bet-to-pot animation
-        let matchOverSeenAt = 0;
         let matchOverReceived = false;
+        let matchOverAcked = false;
+        let opponentPlaceholderToken = 0;
+        let lastOpponentPlaceholderHandNum = null;
+
+        // --- SFX (WebAudio, no external assets required) ---
+        const SFX = (() => {
+            let ctx = null;
+            let enabled = (localStorage.getItem('nebula_sfx') || 'on') === 'on';
+            let lastDealAt = 0;
+            let lastChipAt = 0;
+            let lastTurnAt = 0;
+
+            const ensureCtx = async () => {
+                if (!enabled) return null;
+                if (!ctx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return null;
+                    ctx = new AC();
+                }
+                if (ctx.state === 'suspended') {
+                    try { await ctx.resume(); } catch (_) {}
+                }
+                return ctx;
+            };
+
+            const noiseBuffer = () => {
+                const c = ctx;
+                const buffer = c.createBuffer(1, c.sampleRate * 0.12, c.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+                return buffer;
+            };
+
+            const playDeal = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastDealAt < 55) return; // throttle
+                lastDealAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+
+                const t = c.currentTime;
+                const n = c.createBufferSource();
+                n.buffer = noiseBuffer();
+                const bp = c.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.setValueAtTime(1800, t);
+                bp.Q.setValueAtTime(1.2, t);
+                const g = c.createGain();
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.12, t + 0.005);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+                n.connect(bp).connect(g).connect(c.destination);
+                n.start(t);
+                n.stop(t + 0.11);
+            };
+
+            const playChip = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastChipAt < 85) return; // throttle
+                lastChipAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+
+                const t = c.currentTime;
+                // Coin/chip clink: short noise burst + resonant peaks (less "synthy")
+                const n = c.createBufferSource();
+                n.buffer = noiseBuffer();
+
+                const hp = c.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.setValueAtTime(1800 + Math.random() * 400, t);
+                hp.Q.setValueAtTime(0.7, t);
+
+                const bp = c.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.setValueAtTime(3200 + Math.random() * 600, t);
+                bp.Q.setValueAtTime(7.5, t);
+
+                const g = c.createGain();
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.16, t + 0.004);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+
+                // add a tiny resonant "ping" partial
+                const o = c.createOscillator();
+                o.type = 'sine';
+                const og = c.createGain();
+                og.gain.setValueAtTime(0.0001, t);
+                og.gain.exponentialRampToValueAtTime(0.06, t + 0.004);
+                og.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+                o.frequency.setValueAtTime(4200 + Math.random() * 900, t);
+
+                n.connect(hp).connect(bp).connect(g).connect(c.destination);
+                o.connect(og).connect(c.destination);
+
+                n.start(t);
+                n.stop(t + 0.14);
+                o.start(t);
+                o.stop(t + 0.11);
+            };
+
+            const playTurn = async () => {
+                if (!enabled) return;
+                const tnow = performance.now();
+                if (tnow - lastTurnAt < 500) return;
+                lastTurnAt = tnow;
+                const c = await ensureCtx();
+                if (!c) return;
+                const t = c.currentTime;
+
+                const o = c.createOscillator();
+                o.type = 'sine';
+                const g = c.createGain();
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+                o.frequency.setValueAtTime(880, t);
+                o.frequency.setValueAtTime(1175, t + 0.10);
+                o.connect(g).connect(c.destination);
+                o.start(t);
+                o.stop(t + 0.24);
+            };
+
+            const setEnabled = (on) => {
+                enabled = !!on;
+                localStorage.setItem('nebula_sfx', enabled ? 'on' : 'off');
+            };
+
+            // Unlock on first gesture
+            const unlock = () => { ensureCtx(); };
+            window.addEventListener('pointerdown', unlock, { once: true });
+            window.addEventListener('keydown', unlock, { once: true });
+
+            return {
+                isEnabled: () => enabled,
+                setEnabled,
+                ensureCtx,
+                deal: playDeal,
+                chip: playChip,
+                turn: playTurn
+            };
+        })();
 
         function dbg(msg) {
             // 只在调试阶段使用：把关键推进写到 ACTIVITY，方便你截图发我
@@ -491,7 +640,7 @@
             setVoiceStatus('Voice: Not connected');
             updateMicButton();
         }
-
+        
         const gameState = {
             players: [], pot: 0, dealerIdx: 0, deck: [],
             communityCards: [], round: 'WAITING', activeIdx: 0,
@@ -647,19 +796,7 @@
                 }
             });
 
-            socket.on('activity', (msg) => {
-                addToHistory(msg);
-                // Fallback: if "room_closed" is missed for any reason, still reset UI on match end.
-                if (IS_MULTIPLAYER && String(msg || '').trim() === 'Match over.') {
-                    matchOverSeenAt = Date.now();
-                    setTimeout(() => {
-                        // Only reload if we did NOT receive match_over or room_closed soon after
-                        if (!matchOverReceived && matchOverSeenAt && (Date.now() - matchOverSeenAt) < 5000) {
-                            try { location.reload(); } catch(_) {}
-                        }
-                    }, 2000);
-                }
-            });
+            socket.on('activity', (msg) => addToHistory(msg));
             socket.on('error_msg', ({msg}) => {
                 alert(msg);
                 // If we failed to join (e.g. room already started), return to lobby instead of getting stuck on seat screen.
@@ -687,6 +824,21 @@
                 // 让 UI 立刻回到可选座状态（server 会随后广播 room_state）
                 document.getElementById('seat-overlay').style.display = 'block';
                 document.getElementById('seat-overlay').style.opacity = '1';
+            });
+
+            // Rebuy flow (host approves)
+            socket.on('rebuy_requested', ({ seatIdx, name, amount }) => {
+                addToHistory(`${name || 'Player'} requests REBUY $${Number(amount || 0)} (Seat ${Number(seatIdx) + 1}).`);
+                if (!isHost) return;
+                const ok = confirm(`Rebuy request:\n\n${name || 'Player'} (Seat ${Number(seatIdx) + 1}) wants to rebuy $${Number(amount || 0)}.\n\nApprove?`);
+                if (ok) {
+                    try { socket.emit('rebuy_approve', { seatIdx, amount }); } catch(_) {}
+                } else {
+                    try { socket.emit('rebuy_deny', { seatIdx, amount }); } catch(_) {}
+                }
+            });
+            socket.on('rebuy_denied', ({ msg }) => {
+                alert(msg || 'Rebuy denied by host.');
             });
 
             // voice wiring
@@ -732,13 +884,33 @@
                 animateBetToPot(seatIdx, text);
             });
 
-            socket.on('hand_over', ({ handNum, totalHands, winners, desc }) => {
+            socket.on('hand_over', ({ handNum, totalHands, winners, desc, showdownHands }) => {
                 // show a next-hand prompt
                 const winNames = (winners || []).map(w => w.name).join(' & ');
                 addToHistory(`--- HAND OVER ${handNum}/${totalHands}: ${winNames || 'N/A'} (${desc || ''}) ---`);
 
                 // Pot -> winner chip push animation (multiplayer FX)
                 try { animatePotToWinners(winners || []); } catch(_) {}
+
+                // Reveal showdown hands (players who stayed to the end)
+                try {
+                    if (Array.isArray(showdownHands)) {
+                        showdownHands.forEach(s => {
+                            const seatIdx = s?.seatIdx;
+                            const hand = Array.isArray(s?.hand) ? s.hand.slice(0, 2) : [];
+                            if (!Number.isInteger(seatIdx) || hand.length < 2) return;
+                            const p = gameState.players.find(pp => pp.id === seatIdx);
+                            if (!p) return;
+                            // Update stored hand
+                            p.hand = hand.slice(0, 2);
+                            // Reveal existing placeholder cards if present
+                            if (Array.isArray(p.meshCards) && p.meshCards.length >= 2) {
+                                revealCardOnMesh(p.meshCards[0], hand[0]);
+                                revealCardOnMesh(p.meshCards[1], hand[1]);
+                            }
+                        });
+                    }
+                } catch (_) {}
 
                 const btn = document.getElementById('btn-next');
                 document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
@@ -748,9 +920,8 @@
                 lastHandOverNum = handNum;
             });
 
-            socket.on('match_over', ({ totalHands, standings, hands }) => {
+            socket.on('match_over', ({ totalHands, scheduledHands, playedHands, standings, hands }) => {
                 matchOverReceived = true;
-                try { socket.emit('ack_match_over'); } catch(_) {}
 
                 // Show final results (all hands + final chip standings)
                 const modal = document.getElementById('summary-modal');
@@ -771,8 +942,18 @@
                     safeStandings.forEach((p, idx) => {
                         const div = document.createElement('div');
                         div.className = 'summary-item';
-                        const isMe = Number.isInteger(mySeatIdx) && p.seatIdx === mySeatIdx;
-                        div.innerHTML = `<span style="color:${isMe ? 'gold' : '#fff'}">${idx + 1}. ${p.name || 'Player'} (ID:${p.seatIdx})</span> <b>$${Number(p.chips || 0)}</b>`;
+                        const buyIn = Number.isFinite(Number(p.buyInTotal)) ? Number(p.buyInTotal)
+                                    : (Number.isFinite(Number(p.buyIn)) ? Number(p.buyIn)
+                                    : (Number.isFinite(Number(p.totalBuyIn)) ? Number(p.totalBuyIn) : 0));
+                        const net = Number.isFinite(Number(p.net)) ? Number(p.net) : (Number(p.chips || 0) - buyIn);
+                        const netColor = net >= 0 ? '#00ff88' : '#ff6677';
+                        const netSign = net >= 0 ? '+' : '-';
+                        div.innerHTML = `
+                            <span style="color:#fff;flex:1;">${idx + 1}. ${p.name || 'Player'} (ID:${p.seatIdx})</span>
+                            <span style="min-width:120px; text-align:right; opacity:0.9;">本金 $${buyIn}</span>
+                            <span style="min-width:120px; text-align:right;"><b>剩余 $${Number(p.chips || 0)}</b></span>
+                            <span style="min-width:120px; text-align:right; color:${netColor}; font-weight:bold;">${net >= 0 ? '赚' : '亏'} $${Math.abs(net)}</span>
+                        `;
                         list.appendChild(div);
                     });
 
@@ -782,7 +963,9 @@
 
                     const sec2 = document.createElement('div');
                     sec2.style.cssText = 'text-align:left;margin-bottom:10px;color:rgba(212,175,55,0.8);font-weight:bold;';
-                    sec2.innerText = `Hand Results (${Number(totalHands || safeHands.length)}/${Number(totalHands || safeHands.length)})`;
+                    const sched = Number.isFinite(Number(scheduledHands)) ? Number(scheduledHands) : Number(totalHands || safeHands.length);
+                    const played = Number.isFinite(Number(playedHands)) ? Number(playedHands) : safeHands.length;
+                    sec2.innerText = `Hand Results (${played}/${sched})`;
                     list.appendChild(sec2);
 
                     safeHands.sort((a,b) => (a.handNum||0)-(b.handNum||0)).forEach(h => {
@@ -799,6 +982,21 @@
                 document.querySelectorAll('#controls button').forEach(b => b.disabled = true);
                 if (modal) modal.style.display = 'block';
                 setVoiceStatus('Voice: Connected'); // keep voice; users can still talk during summary
+
+                // Manual confirm: only when user clicks do we ACK + leave (disconnect counts as offline)
+                const confirmBtn = document.getElementById('summary-confirm-btn');
+                if (confirmBtn) {
+                    confirmBtn.onclick = () => {
+                        if (IS_MULTIPLAYER && socket && !matchOverAcked) {
+                            matchOverAcked = true;
+                            try { socket.emit('ack_match_over'); } catch(_) {}
+                            try { voiceLeaveAndCleanup(true); } catch(_) {}
+                            try { socket.disconnect(); } catch(_) {}
+                        }
+                        // Return to main/lobby
+                        try { location.reload(); } catch(_) {}
+                    };
+                }
             });
 
             socket.on('private_hand', ({ seatIdx, hand }) => {
@@ -809,6 +1007,8 @@
             });
 
             socket.on('game_state', (s) => {
+                // Your-turn beep: detect transition into "my turn" (avoid repeat beeps)
+                const wasMyTurn = !!gameState._myTurn;
                 // 服务器开启后，确保所有人都进入牌桌
                 if (s.started) {
                     enterMultiplayerGame();
@@ -832,6 +1032,8 @@
                 }
                 // 控制区显示逻辑（联机）：HAND_OVER 才显示 Next Round；否则显示常规按钮并根据 activeSeatIdx 开关
                 const btnNext = document.getElementById('btn-next');
+                const btnCheck = document.getElementById('btn-check');
+                const btnRebuy = document.getElementById('btn-rebuy');
                 if (s.round === 'HAND_OVER') {
                     document.querySelectorAll('#controls button:not(#btn-next)').forEach(b => b.style.display = 'none');
                     btnNext.style.display = 'block';
@@ -847,6 +1049,66 @@
                         toggleButtons(false);
                     }
                 }
+                try {
+                    const nowMyTurn = (s.activeSeatIdx === mySeatIdx) && (s.round !== 'HAND_OVER') && (s.round !== 'WAITING');
+                    gameState._myTurn = nowMyTurn;
+                    if (!wasMyTurn && nowMyTurn) {
+                        SFX.turn();
+                    }
+                } catch (_) {}
+
+                // PokerNow-like: show exact Check/Call amount
+                try {
+                    const meS = (s.players || []).find(pp => pp.seatIdx === mySeatIdx);
+                    const maxBet = Number(s.currentMaxBet || 0);
+                    const myBet = meS ? Number(meS.currentBet || 0) : 0;
+                    const myChips = meS ? Number(meS.chips || 0) : 0;
+                    const toCall = meS ? Math.max(0, maxBet - myBet) : 0;
+                    const callPay = Math.max(0, Math.min(toCall, myChips));
+                    if (btnCheck) {
+                        btnCheck.innerText = (toCall > 0)
+                            ? `Call $${callPay}${(myChips > 0 && myChips < toCall) ? ' (All-in)' : ''}`
+                            : 'Check $0';
+                    }
+                } catch (_) {}
+
+                // Rebuy button: only for seated players who are busted, between hands
+                try {
+                    if (btnRebuy) {
+                        const meS = (s.players || []).find(pp => pp.seatIdx === mySeatIdx);
+                        const busted = !!meS && Number(meS.chips || 0) <= 0;
+                        const betweenHands = (s.round === 'HAND_OVER' || s.round === 'WAITING');
+                        btnRebuy.style.display = (IS_MULTIPLAYER && busted && betweenHands && !matchOverReceived) ? 'block' : 'none';
+                        btnRebuy.disabled = !(IS_MULTIPLAYER && busted && betweenHands);
+                    }
+                } catch (_) {}
+
+                // Auto prompt: if you are busted between hands, ask whether to rebuy and rejoin next hand
+                try {
+                    if (IS_MULTIPLAYER && !matchOverReceived) {
+                        const meS = (s.players || []).find(pp => pp.seatIdx === mySeatIdx);
+                        const busted = !!meS && Number(meS.chips || 0) <= 0;
+                        const betweenHands = (s.round === 'HAND_OVER' || s.round === 'WAITING');
+                        const handKey = `${s.handNum || 0}:${s.round || ''}`;
+                        if (busted && betweenHands && rebuyPromptedForHand !== handKey) {
+                            rebuyPromptedForHand = handKey;
+                            setTimeout(() => {
+                                const ok = confirm('You are out of chips.\n\nRebuy to re-enter next hand?');
+                                if (!ok) return;
+                                const def = Number.isFinite(Number(gameState.initialChips)) ? Number(gameState.initialChips) : 1000;
+                                const raw = prompt('Rebuy amount (>=1000 and multiple of 50):', String(def));
+                                if (raw === null) return;
+                                const amt = Number(raw);
+                                if (!Number.isFinite(amt) || amt < 1000 || (amt % 50) !== 0) {
+                                    alert('Rebuy amount must be >=1000 and a multiple of 50.');
+                                    return;
+                                }
+                                try { socket.emit('rebuy', { amount: amt }); } catch(_) {}
+                                addToHistory(`Rebuy: $${amt} (applies next hand)`);
+                            }, 50);
+                        }
+                    }
+                } catch (_) {}
                 // 同步玩家筹码/弃牌
                 (s.players || []).forEach(sp => {
                     const p = gameState.players.find(pp => pp.id === sp.seatIdx);
@@ -857,6 +1119,25 @@
                     p.isBankrupt = sp.isBankrupt;
                 });
                 updateUI();
+
+                // SB/BB badges
+                try {
+                    const sb = s.sbSeatIdx;
+                    const bb = s.bbSeatIdx;
+                    gameState.players.forEach(pp => {
+                        const el = document.getElementById(`blind-${pp.id}`);
+                        if (!el) return;
+                        if (Number.isInteger(sb) && pp.id === sb) {
+                            el.innerText = 'SB';
+                            el.style.display = 'inline-block';
+                        } else if (Number.isInteger(bb) && pp.id === bb) {
+                            el.innerText = 'BB';
+                            el.style.display = 'inline-block';
+                        } else {
+                            el.style.display = 'none';
+                        }
+                    });
+                } catch (_) {}
 
                 // 新的一手：先清理旧桌面，再渲染本手的公共牌/手牌占位
                 if (gameState.mpHandNum !== s.handNum) {
@@ -877,7 +1158,7 @@
                     });
 
                     // 给其他玩家发两张背面占位牌（仅在我已确定座位后）
-                    if (mySeatIdx !== -1) dealOpponentPlaceholders();
+                    if (mySeatIdx !== -1) dealOpponentPlaceholders(s.handNum);
 
                     // 如果我的私牌已经缓存到了，现在应用
                     if (mySeatIdx !== -1) applyPrivateHandIfReady(mySeatIdx);
@@ -890,11 +1171,11 @@
                     gameState.communityCards.push(card);
                     // 直接在桌面渲染一张（不走本地逻辑）
                     const mesh = createCardMesh(card, true);
-                    mesh.position.set(0, 0.18, 0);
-                    mesh.rotation.set(0,0,0);
+                    const finalX = (gameState.communityCards.length-3)*0.9;
+                    mesh.position.set(finalX, 5, 0);
                     cardsGroup.add(mesh);
-                    gsap.fromTo(mesh.position, {y: 5}, {y: 0.18, duration: 0.5});
-                    gsap.to(mesh.position, { x: (gameState.communityCards.length-3)*0.9, z: 0, duration: 0.5 });
+                    orientCardTowardViewer(mesh, mySeatIdx);
+                    gsap.to(mesh.position, {y: 0.18, duration: 0.5, ease: "power2.out"});
                 }
             });
 
@@ -954,7 +1235,15 @@
             })();
         }
 
-        async function dealOpponentPlaceholders() {
+        async function dealOpponentPlaceholders(handNum) {
+            // cancel any in-flight placeholder dealing
+            const token = (opponentPlaceholderToken || 0) + 1;
+            opponentPlaceholderToken = token;
+
+            // avoid re-dealing placeholders multiple times for the same hand
+            if (Number.isFinite(Number(handNum)) && lastOpponentPlaceholderHandNum === handNum) return;
+            lastOpponentPlaceholderHandNum = Number.isFinite(Number(handNum)) ? handNum : lastOpponentPlaceholderHandNum;
+
             gameState.players.forEach((p) => {
                 if (p.id === mySeatIdx) return;
                 // 确保每个对手只有两张背面占位牌
@@ -965,11 +1254,22 @@
             // 顺序发牌（避免“一瞬间全发完”的感觉）
             for (const p of gameState.players) {
                 if (p.id === mySeatIdx) continue;
+                // 输光/破产的玩家不发牌（符合“下一把不给他发牌”的观感）
+                if (Number(p.chips || 0) <= 0 || p.isBankrupt) continue;
                 for (let k = 0; k < 2; k++) {
+                    if (opponentPlaceholderToken !== token) return;
                     const dummy = { s: 'spades', r: 'A', v: 12 }; // 每张都用独立对象
                     p.hand.push(dummy);
                     // eslint-disable-next-line no-await-in-loop
                     await dealCardAnim(dummy, p, false);
+                    // if a newer placeholder render started, cleanup the last mesh we just added
+                    if (opponentPlaceholderToken !== token) {
+                        try {
+                            const last = (p.meshCards || []).pop();
+                            if (last) cardsGroup.remove(last);
+                        } catch(_) {}
+                        return;
+                    }
                     // eslint-disable-next-line no-await-in-loop
                     if (IS_MULTIPLAYER) await new Promise(r => setTimeout(r, 120));
                 }
@@ -997,6 +1297,8 @@
             const p = gameState.players.find(pp => pp.id === seatIdx);
             if (!p || !p.pos) return;
 
+            try { SFX.chip(); } catch (_) {}
+
             // parse amount (optional)
             const m = String(text || '').match(/(\d+)/);
             const amt = m ? Number(m[1]) : 50;
@@ -1004,9 +1306,11 @@
 
             for (let i = 0; i < chipCount; i++) {
                 const chip = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xd4af37, transparent: true, opacity: 0.55, metalness: 0.8, roughness: 0.15 })
+                    new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
+                    getChipMaterial().clone()
                 );
+                chip.material.transparent = true;
+                chip.material.opacity = 0.7;
                 chip.position.set(p.pos.x, 0.08, p.pos.z);
                 // 让筹码“平躺”在桌面（和离线一致）：Cylinder 默认就是平躺（圆面朝上）
                 chip.rotation.set(0, Math.random() * Math.PI * 2, 0);
@@ -1023,7 +1327,7 @@
                     ease: "power2.out"
                 });
                 gsap.to(chip.material, {
-                    opacity: 0.5,
+                    opacity: 0.55,
                     duration: 0.65,
                     ease: "power1.out"
                 });
@@ -1034,6 +1338,8 @@
             if (!IS_MULTIPLAYER) return;
             if (!Array.isArray(winners) || winners.length === 0) return;
             if (!potChipFX || potChipFX.length === 0) return;
+
+            try { SFX.chip(); } catch (_) {}
 
             const winnerSeats = winners.map(w => w.seatIdx).filter(s => Number.isInteger(s));
             if (winnerSeats.length === 0) return;
@@ -1095,21 +1401,56 @@
             scene.add(new THREE.AmbientLight(0xffffff, 0.05));
             
             // 强力垂直白色聚光灯 - 产生高级感反光
-            const whiteSpot = new THREE.SpotLight(0xffffff, 100);
+            whiteSpot = new THREE.SpotLight(0xffffff, 100);
             whiteSpot.position.set(0, 12, 0);
-            whiteSpot.angle = Math.PI / 8;
-            whiteSpot.penumbra = 0.3;
-            whiteSpot.decay = 1.5;
-            whiteSpot.distance = 40;
+            whiteSpot.angle = Math.PI / 6;
+            whiteSpot.penumbra = 0.65;
+            whiteSpot.decay = 1.35;
+            whiteSpot.distance = 60;
             // 更柔和、垂直落在桌面中心（避免“歪的/黑斑”观感）
             whiteSpot.target.position.set(0, 0, 0);
             scene.add(whiteSpot.target);
             scene.add(whiteSpot);
             
             // 辅助点光源增加中心高光
-            const rimLight = new THREE.PointLight(0xffffff, 10, 10);
+            rimLight = new THREE.PointLight(0xffffff, 10, 10);
             rimLight.position.set(0, 5, 0);
             scene.add(rimLight);
+
+            // initial adapt for default table size
+            updateTableLights(7.0);
+        }
+
+        function updateTableLights(tableRadius) {
+            // Make spotlight cover the full table regardless of radius (3-10 players)
+            if (!whiteSpot) return;
+            const r = Math.max(3.5, Math.min(9.0, Number(tableRadius || 7.0)));
+
+            // Choose a height that keeps the cone wide enough without blowing out the center
+            const h = Math.max(9.5, r * 2.05);
+            whiteSpot.position.set(0, h, 0);
+            whiteSpot.target.position.set(0, 0, 0);
+
+            // Cover slightly beyond table edge so rim stays lit
+            const cover = r * 1.25;
+            const ang = Math.atan2(cover, h); // half-angle needed
+            whiteSpot.angle = Math.max(0.28, Math.min(1.05, ang));
+
+            // Distance: far enough to include the full cone + a bit
+            whiteSpot.distance = Math.max(30, h * 4.0);
+            whiteSpot.penumbra = 0.7;
+
+            // Intensity scaling: bigger tables need more light, but keep it stable
+            const base = 75;
+            const scale = (r / 7.0);
+            whiteSpot.intensity = base * (0.85 + 0.35 * scale);
+
+            // Gentle fill near center so cards/chips read well
+            if (rimLight) {
+                rimLight.position.set(0, Math.max(3.8, h * 0.42), 0);
+                rimLight.distance = Math.max(10, r * 3.2);
+                rimLight.intensity = 7.5 * (0.9 + 0.3 * scale);
+            }
         }
 
         function setupAtmosphere() {
@@ -1122,10 +1463,10 @@
             // Layer A: very fine dense stars
             {
                 const count = 26000;
-                const geo = new THREE.BufferGeometry();
-                const pos = new Float32Array(count * 3);
-                const colors = new Float32Array(count * 3);
-                for(let i=0; i<count; i++) {
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            for(let i=0; i<count; i++) {
                     const r = 14 + Math.random() * 46;
                     const theta = Math.random() * Math.PI * 2;
                     const phi = Math.acos(2 * Math.random() - 1);
@@ -1134,10 +1475,10 @@
                     pos[i*3+2] = r * Math.cos(phi);
 
                     const c = colorPaleGold.clone().lerp(colorSoftWhite, Math.random() * 0.45);
-                    colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
-                }
-                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
                 const mat = new THREE.PointsMaterial({
                     size: 0.065,
                     sizeAttenuation: true,
@@ -1185,9 +1526,24 @@
             environmentGroup.add(starField);
         }
 
-        function createTable() {
-            // 具有厚度的实体金属牌桌 + 绿色底面 (稍微增大半径以容纳10人)
-            const radius = 7.0; 
+        function getDynamicTableRadius(numActive) {
+            const n = Math.max(3, Math.min(10, Number(numActive || 10)));
+            // 3人更紧凑，10人更宽松（线性插值）
+            const t = (n - 3) / (10 - 3);
+            return 5.6 + t * (7.0 - 5.6);
+        }
+
+        function rebuildTable(radius) {
+            // clear old table geometry
+            while (tableGroup.children.length > 0) tableGroup.remove(tableGroup.children[0]);
+            tableParticles = null;
+            createTable(radius);
+            try { updateTableLights(radius); } catch (_) {}
+        }
+
+        function createTable(radiusOverride) {
+            // 具有厚度的实体金属牌桌 + 绿色底面
+            const radius = Number.isFinite(Number(radiusOverride)) ? Number(radiusOverride) : 7.0;
             const thickness = 0.8;
             
             // 1. 桌面主体 (金属边框/侧面)
@@ -1202,39 +1558,45 @@
             tableMesh.position.y = -thickness / 2;
             tableGroup.add(tableMesh);
 
-            // 1.5 桌边柔光金色圈（区分背景，低饱和度微光）
-            const rimY = 0.035;
-            const rimRadius = radius * 0.97;
-            const rim = new THREE.Mesh(
-                new THREE.TorusGeometry(rimRadius, 0.06, 16, 128),
+            // 1.5 桌边“嵌入式灯带”：用贴合桌面的发光 Ring 来模拟“嵌在桌子里的灯槽”，避免与筹码穿模
+            const grooveOuter = radius * 0.965;
+            const grooveInner = radius * 0.92;
+            const groove = new THREE.Mesh(
+                new THREE.RingGeometry(grooveInner, grooveOuter, 128),
                 new THREE.MeshStandardMaterial({
-                    color: 0x6b4e16,          // 浅棕金底
-                    metalness: 0.6,
-                    roughness: 0.35,
-                    emissive: 0xffe7b0,       // 浅黄色柔光
-                    emissiveIntensity: 0.85,
+                    color: 0x101010,
+                    emissive: 0xffe0a6,
+                    emissiveIntensity: 1.25,
+                    roughness: 0.65,
+                    metalness: 0.05,
                     transparent: true,
-                    opacity: 0.55
+                    opacity: 0.62,
+                    side: THREE.DoubleSide,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -2,
+                    polygonOffsetUnits: -2
                 })
             );
-            rim.rotation.x = Math.PI / 2;
-            rim.position.y = rimY;
-            tableGroup.add(rim);
+            groove.rotation.x = -Math.PI / 2;
+            groove.position.y = 0.002; // slightly recessed
+            tableGroup.add(groove);
 
-            // 外侧更柔的光晕（不刺眼）
-            const halo = new THREE.Mesh(
-                new THREE.TorusGeometry(rimRadius + 0.08, 0.11, 16, 128),
-                new THREE.MeshBasicMaterial({
-                    color: 0xffe2a3,
-                    transparent: true,
-                    opacity: 0.10,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false
+            // dark lip above the groove to sell "embedded" look
+            const lip = new THREE.Mesh(
+                new THREE.RingGeometry(radius * 0.90, grooveInner, 128),
+                new THREE.MeshStandardMaterial({
+                    color: 0x070707,
+                    roughness: 0.9,
+                    metalness: 0.1,
+                    side: THREE.DoubleSide,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnits: -1
                 })
             );
-            halo.rotation.x = Math.PI / 2;
-            halo.position.y = rimY + 0.01;
-            tableGroup.add(halo);
+            lip.rotation.x = -Math.PI / 2;
+            lip.position.y = 0.006;
+            tableGroup.add(lip);
 
             // 2. 桌面中心的绿色丝绒底
             const feltGeo = new THREE.CircleGeometry(radius * 0.95, 64);
@@ -1288,6 +1650,11 @@
             const totalActive = occupied.length;
             if (totalActive === 0) return;
 
+            // 根据人数动态调整桌子/围坐半径，保证少人时更紧凑、更易看清牌桌
+            const tableRadius = getDynamicTableRadius(totalActive);
+            const seatRadius = Math.max(4.4, tableRadius - 1.1);
+            try { rebuildTable(tableRadius); } catch (_) {}
+
             // 2. 找到“我”在被占用座位中的顺序索引
             let myOrderIdx = occupied.findIndex(s => s.seatIdx === gameState.myPlayerIdx);
             if (myOrderIdx < 0) myOrderIdx = 0;
@@ -1296,11 +1663,11 @@
             occupied.forEach((seat, orderIdx) => {
                 const relativeIdx = (orderIdx - myOrderIdx + totalActive) % totalActive;
                 const visualAngle = (relativeIdx / totalActive) * Math.PI * 2;
-                const pos = new THREE.Vector3(Math.sin(visualAngle) * 6.0, 0.05, Math.cos(visualAngle) * 6.0);
+                const pos = new THREE.Vector3(Math.sin(visualAngle) * seatRadius, 0.05, Math.cos(visualAngle) * seatRadius);
                 
                 const stackGroup = new THREE.Group();
                 stackGroup.position.copy(pos);
-                stackGroup.position.add(new THREE.Vector3(Math.sin(visualAngle)*0.8, 0, Math.cos(visualAngle)*0.8));
+                stackGroup.position.add(new THREE.Vector3(Math.sin(visualAngle)*0.85, 0, Math.cos(visualAngle)*0.85));
                 playerStacksGroup.add(stackGroup);
 
                 let pName = seat.name || (seat.type === 'ai' ? `AI-${seat.seatIdx}` : `Player-${seat.seatIdx}`);
@@ -1323,7 +1690,10 @@
                 // 在 HUD 中显示玩家 ID 和名字
                 hud.innerHTML = `
                     <div style="font-size: 10px; opacity: 0.6; color: gold;">ID: ${seat.seatIdx}</div>
-                    <div style="color: white; font-weight: bold;">${pName}</div>
+                    <div style="color: white; font-weight: bold; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span>${pName}</span>
+                        <span id="blind-${seat.seatIdx}" style="display:none; font-size:10px; font-weight:900; padding:2px 6px; border-radius:10px; border:1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.35); color:#fff; letter-spacing:0.5px;">BB</span>
+                    </div>
                     <div id="chips-${seat.seatIdx}" class="chip-display">$${pChips}</div>
                     <div id="action-${seat.seatIdx}" style="display:none; margin-top:6px; text-align:center; font-size:11px; color:#d4af37; letter-spacing:1px;">ACTION</div>
                 `;
@@ -1336,6 +1706,9 @@
 
         function updatePlayerStackMesh(player) {
             const group = player.stackGroup;
+            // Avoid flicker: only rebuild stack meshes when chip count actually changed
+            if (player._lastStackChips === player.chips) return;
+            player._lastStackChips = player.chips;
             while(group.children.length > 0) group.remove(group.children[0]);
             
             let totalChipCount = Math.floor(player.chips / CONFIG.chipValue);
@@ -1357,38 +1730,91 @@
                     const chipGroup = new THREE.Group();
                     chipGroup.position.set(ox, j * 0.055, oz);
                     
-                    // 1. 半透明筹码主体
+                    // Bright solid chip with texture (PokerNow-like readability)
                     const chipBody = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), 
-                        new THREE.MeshStandardMaterial({ 
-                            color: 0xc5a059,
-                            metalness: 0.5,
-                            roughness: 0.1,
-                            transparent: true,
-                            opacity: 0.6, // 变得透明
-                            emissive: 0xd4af37,
-                            emissiveIntensity: 0.1
-                        })
+                        new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
+                        getChipMaterial()
                     );
                     chipGroup.add(chipBody);
-                    
-                    // 2. 边缘粒子特效
-                    const pGeo = new THREE.BufferGeometry();
-                    const pCount = 30;
-                    const pPos = new Float32Array(pCount * 3);
-                    for(let k=0; k<pCount; k++) {
-                        const angle = (k / pCount) * Math.PI * 2;
-                        pPos[k*3] = Math.cos(angle) * 0.21; // 略大于筹码半径
-                        pPos[k*3+1] = (Math.random()-0.5) * 0.05;
-                        pPos[k*3+2] = Math.sin(angle) * 0.21;
-                    }
-                    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-                    const pMat = new THREE.PointsMaterial({ color: 0xffd700, size: 0.015, transparent: true, opacity: 0.8 });
-                    chipGroup.add(new THREE.Points(pGeo, pMat));
                     
                     group.add(chipGroup);
                 }
             }
+        }
+
+        let _chipMatCached = null;
+        function getChipMaterial() {
+            if (_chipMatCached) return _chipMatCached;
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+
+            // base (blue chip)
+            const g = ctx.createRadialGradient(W/2, H/2, 12, W/2, H/2, W/2);
+            g.addColorStop(0, '#f2f8ff');
+            g.addColorStop(0.28, '#bfe2ff');
+            g.addColorStop(0.62, '#1b78d6');
+            g.addColorStop(1, '#083a77');
+            ctx.fillStyle = g;
+            ctx.fillRect(0,0,W,H);
+
+            // rings
+            ctx.strokeStyle = 'rgba(3, 20, 45, 0.45)';
+            ctx.lineWidth = 10;
+            ctx.beginPath(); ctx.arc(W/2, H/2, 104, 0, Math.PI*2); ctx.stroke();
+            ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(W/2, H/2, 70, 0, Math.PI*2); ctx.stroke();
+
+            // edge ticks (chip stripes)
+            ctx.save();
+            ctx.translate(W/2, H/2);
+            for (let i = 0; i < 24; i++) {
+                ctx.rotate((Math.PI*2)/24);
+                ctx.fillStyle = (i % 2 === 0) ? 'rgba(255,255,255,0.78)' : 'rgba(10, 35, 85, 0.22)';
+                ctx.fillRect(88, -8, 24, 16);
+            }
+            ctx.restore();
+
+            // center plate for value text (keeps "50" readable)
+            ctx.fillStyle = 'rgba(255,255,255,0.28)';
+            ctx.beginPath();
+            ctx.arc(W/2, H/2, 50, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(W/2, H/2, 50, 0, Math.PI*2);
+            ctx.stroke();
+
+            // value text
+            ctx.fillStyle = 'rgba(0,0,0,0.92)';
+            ctx.font = '900 78px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('50', W/2, H/2 + 3);
+
+            // micro speckles for texture
+            for (let i = 0; i < 1200; i++) {
+                const x = Math.random()*W, y = Math.random()*H;
+                const a = Math.random() < 0.04 ? 0.35 : 0.08;
+                ctx.fillStyle = Math.random() < 0.52 ? `rgba(255,255,255,${a})` : `rgba(0,15,40,${a})`;
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = 8;
+            tex.needsUpdate = true;
+
+            _chipMatCached = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                map: tex,
+                roughness: 0.46,
+                metalness: 0.03,
+                emissive: 0x7ec3ff,
+                emissiveIntensity: 0.045
+            });
+            return _chipMatCached;
         }
 
         async function startNewHand() {
@@ -1481,6 +1907,7 @@
         }
 
         async function dealCardAnim(card, player, faceUp) {
+            try { SFX.deal(); } catch (_) {}
             const mesh = createCardMesh(card, faceUp);
             mesh.position.set(0, 3, 0);
             cardsGroup.add(mesh);
@@ -1518,72 +1945,33 @@
 
         function createCardMesh(card, faceUp) {
             const group = new THREE.Group();
-            // 卡牌主体 - 深色底
+            // 卡牌主体 - 白底（PokerNow 风格）
             const body = new THREE.Mesh(
                 new THREE.BoxGeometry(CONFIG.cardWidth, 0.02, CONFIG.cardHeight), 
-                new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.8, roughness: 0.2 })
+                new THREE.MeshStandardMaterial({ color: 0xf7f7f7, metalness: 0.05, roughness: 0.85 })
             );
             group.add(body);
             group.userData = { card: card };
 
             if(faceUp) {
-                // 正面：金色粒子镂空感
+                // 正面：白底 + 红黑花色（PokerNow-like）
                 const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=384;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
-                
-                const isRed = (card.s === 'hearts' || card.s === 'diamonds');
-                const particleColor = isRed ? '#ff69b4' : '#4422ff'; // 金粉色 vs 金蓝色
+                drawCardFaceCanvas(canvas, card);
 
-                ctx.fillStyle = '#d4af37'; 
-                ctx.textAlign = 'center';
-                ctx.font = 'bold 100px serif';
-                ctx.fillText(card.r, 128, 150);
-                ctx.font = '80px serif';
-                ctx.fillText({hearts:'♥',diamonds:'♦',clubs:'♣',spades:'♠'}[card.s], 128, 250);
-
-                const imgData = ctx.getImageData(0,0,256,384);
-                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
-                for(let y=0; y<384; y+=4) {
-                    for(let x=0; x<256; x+=4) {
-                        const idx = (y * 256 + x) * 4;
-                        if(imgData.data[idx+1] > 100) { 
-                            ctx.fillStyle = particleColor;
-                            ctx.globalAlpha = 0.5 + Math.random()*0.5;
-                            ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
-                        }
-                    }
-                }
-
-                const label = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+                const label = new THREE.Mesh(
+                    new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight),
+                    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true })
+                );
                 label.rotation.x = -Math.PI/2; label.position.y = 0.011;
                 group.add(label);
             } else {
-                // 未知牌：金色柔光粒子感处理的柔和效果
-                const particleCount = 300;
-                const pGeo = new THREE.BufferGeometry();
-                const pPos = new Float32Array(particleCount * 3);
-                for(let i=0; i<particleCount; i++) {
-                    pPos[i*3] = (Math.random()-0.5) * CONFIG.cardWidth;
-                    pPos[i*3+1] = 0.02 + Math.random()*0.05;
-                    pPos[i*3+2] = (Math.random()-0.5) * CONFIG.cardHeight;
-                }
-                pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-                const pMat = new THREE.PointsMaterial({ 
-                    color: 0xd4af37, 
-                    size: 0.03, 
-                    transparent: true, 
-                    opacity: 0.4,
-                    blending: THREE.AdditiveBlending 
-                });
-                const points = new THREE.Points(pGeo, pMat);
-                group.add(points);
-
-                const backCanvas = document.createElement('canvas'); backCanvas.width=128; backCanvas.height=192;
-                const bctx = backCanvas.getContext('2d');
-                bctx.fillStyle = '#050505'; bctx.fillRect(0,0,128,192);
-                bctx.strokeStyle = '#d4af37'; bctx.lineWidth = 1; bctx.strokeRect(10, 10, 108, 172);
-                const back = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(backCanvas) }));
+                // 背面：金色粒子/金箔质感牌背
+                const backCanvas = document.createElement('canvas'); backCanvas.width=256; backCanvas.height=384;
+                drawCardBackCanvas(backCanvas);
+                const back = new THREE.Mesh(
+                    new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight),
+                    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(backCanvas) })
+                );
                 back.rotation.x = Math.PI/2; back.position.y = 0.011;
                 group.add(back);
             }
@@ -1595,33 +1983,172 @@
             while(mesh.children.length > 1) mesh.remove(mesh.children[1]); // 保留body
             
             const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=384;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
-            
-            const isRed = (card.s === 'hearts' || card.s === 'diamonds');
-            const particleColor = isRed ? '#ff69b4' : '#4422ff';
-
-            ctx.fillStyle = '#d4af37'; ctx.textAlign = 'center';
-            ctx.font = 'bold 100px serif'; ctx.fillText(card.r, 128, 150);
-            ctx.font = '80px serif'; ctx.fillText({hearts:'♥',diamonds:'♦',clubs:'♣',spades:'♠'}[card.s], 128, 250);
-            
-            const imgData = ctx.getImageData(0,0,256,384);
-            ctx.fillStyle = '#050505'; ctx.fillRect(0,0,256,384);
-            for(let y=0; y<384; y+=4) {
-                for(let x=0; x<256; x+=4) {
-                    const idx = (y * 256 + x) * 4;
-                    if(imgData.data[idx+1] > 100) {
-                        ctx.fillStyle = particleColor;
-                        ctx.globalAlpha = 0.5 + Math.random()*0.5;
-                        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
-                    }
-                }
-            }
-            const label = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+            drawCardFaceCanvas(canvas, card);
+            const label = new THREE.Mesh(
+                new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight),
+                new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true })
+            );
             label.rotation.x = -Math.PI/2; label.position.y = 0.011;
             mesh.add(label);
 
             gsap.to(mesh.rotation, { x: 0, duration: 0.5 });
+        }
+
+        function revealCardOnMesh(mesh, card) {
+            if (!mesh) return;
+            mesh.userData.card = card;
+            // remove old face/back
+            while (mesh.children.length > 1) mesh.remove(mesh.children[1]);
+            const canvas = document.createElement('canvas'); canvas.width=256; canvas.height=384;
+            drawCardFaceCanvas(canvas, card);
+            const label = new THREE.Mesh(
+                new THREE.PlaneGeometry(CONFIG.cardWidth, CONFIG.cardHeight),
+                new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true })
+            );
+            label.rotation.x = -Math.PI/2; label.position.y = 0.011;
+            mesh.add(label);
+            // keep existing tilt; only add a tiny "reveal" nudge
+            gsap.to(mesh.rotation, { x: mesh.rotation.x * 0.98, duration: 0.25 });
+        }
+
+        function orientCardTowardViewer(mesh, viewerSeatIdx) {
+            if (!mesh) return;
+            let ref = null;
+            const viewer = gameState.players?.find(p => p.id === viewerSeatIdx);
+            if (viewer && viewer.stackGroup?.position) ref = viewer.stackGroup.position;
+            else if (viewer && viewer.pos) ref = viewer.pos;
+            else if (camera?.position) ref = camera.position;
+            if (!ref) return;
+
+            const dx = ref.x - mesh.position.x;
+            const dz = ref.z - mesh.position.z;
+            const yaw = Math.atan2(dx, dz);
+            mesh.rotation.order = 'YXZ';
+            mesh.rotation.y = yaw;
+            mesh.rotation.x = 0.28; // tilt toward viewer for readability
+            mesh.rotation.z = 0;
+        }
+
+        function drawCardFaceCanvas(canvas, card) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            const suitChar = ({hearts:'♥',diamonds:'♦',clubs:'♣',spades:'♠'}[card.s]) || '?';
+            const isRed = (card.s === 'hearts' || card.s === 'diamonds');
+            const ink = isRed ? '#c21807' : '#111111';
+
+            // background
+            ctx.clearRect(0,0,W,H);
+            ctx.fillStyle = '#fdfdfd';
+            ctx.fillRect(0,0,W,H);
+
+            // border (slight rounded rectangle)
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = 6;
+            roundRect(ctx, 10, 10, W-20, H-20, 18);
+            ctx.stroke();
+
+            // corners
+            ctx.fillStyle = ink;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.font = 'bold 54px Arial, sans-serif';
+            ctx.fillText(String(card.r), 22, 18);
+            ctx.font = 'bold 52px Arial, sans-serif';
+            ctx.fillText(suitChar, 24, 76);
+
+            // bottom-right (rotated)
+            ctx.save();
+            ctx.translate(W, H);
+            ctx.rotate(Math.PI);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillStyle = ink;
+            ctx.font = 'bold 54px Arial, sans-serif';
+            ctx.fillText(String(card.r), 22, 18);
+            ctx.font = 'bold 52px Arial, sans-serif';
+            ctx.fillText(suitChar, 24, 76);
+            ctx.restore();
+
+            // center suit
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = ink;
+            ctx.font = 'bold 170px Arial, sans-serif';
+            ctx.fillText(suitChar, W/2, H/2 + 10);
+        }
+
+        function drawCardBackCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            // Gold-foil base gradient
+            const g = ctx.createLinearGradient(0, 0, W, H);
+            g.addColorStop(0, '#6b4b12');
+            g.addColorStop(0.35, '#ffd27a');
+            g.addColorStop(0.65, '#b8831f');
+            g.addColorStop(1, '#3a2506');
+            ctx.fillStyle = g;
+            ctx.fillRect(0,0,W,H);
+            ctx.strokeStyle = 'rgba(20, 12, 3, 0.85)';
+            ctx.lineWidth = 6;
+            roundRect(ctx, 10, 10, W-20, H-20, 18);
+            ctx.stroke();
+
+            // subtle diagonal micro-lines (foil brushing)
+            ctx.globalAlpha = 0.22;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.lineWidth = 1;
+            for (let i = -H; i < W; i += 10) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + H, H);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+
+            // gold particle "sparkles"
+            const rng = (a, b) => a + Math.random() * (b - a);
+            for (let i = 0; i < 1800; i++) {
+                const x = Math.random() * W;
+                const y = Math.random() * H;
+                const r = rng(0.4, 1.35);
+                const bright = Math.random();
+                const a = bright > 0.985 ? rng(0.65, 0.95) : rng(0.05, 0.18);
+                ctx.fillStyle = bright > 0.985 ? `rgba(255, 245, 210, ${a})` : `rgba(255, 212, 120, ${a})`;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // center emblem (very subtle)
+            ctx.save();
+            ctx.translate(W / 2, H / 2);
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = 'rgba(25, 16, 4, 0.9)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 92, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = 'rgba(255, 230, 150, 0.9)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, 92, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            const rr = Math.min(r, w/2, h/2);
+            ctx.beginPath();
+            ctx.moveTo(x + rr, y);
+            ctx.lineTo(x + w - rr, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+            ctx.lineTo(x + w, y + h - rr);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+            ctx.lineTo(x + rr, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+            ctx.lineTo(x, y + rr);
+            ctx.quadraticCurveTo(x, y, x + rr, y);
+            ctx.closePath();
         }
 
         function createFoldParticles(player) {
@@ -1681,6 +2208,7 @@
             p.chips -= realAmt;
             p.currentBet += realAmt;
             gameState.pot += realAmt;
+            try { SFX.chip(); } catch (_) {}
             
             if(p.currentBet > gameState.currentMaxBet) {
                 gameState.currentMaxBet = p.currentBet;
@@ -1690,9 +2218,11 @@
             
             // 简单的筹码实体，用于下注动画
             const chip = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), 
-                new THREE.MeshStandardMaterial({ color: 0xd4af37, transparent: true, opacity: 0.7 })
+                new THREE.CylinderGeometry(0.21, 0.21, 0.05, 24),
+                getChipMaterial().clone()
             );
+            chip.material.transparent = true;
+            chip.material.opacity = 0.85;
             chip.position.copy(p.pos);
             chip.position.y = 0.1;
             chipsGroup.add(chip);
@@ -1746,27 +2276,27 @@
                 setTimeout(() => {
                     try {
                         // AI 决策
-                        const callAmt = gameState.currentMaxBet - p.currentBet;
-                        const rand = Math.random();
-                        if(rand > 0.85 && callAmt > 0) {
+                    const callAmt = gameState.currentMaxBet - p.currentBet;
+                    const rand = Math.random();
+                    if(rand > 0.85 && callAmt > 0) {
                             p.isFolded = true; 
                             addToHistory(`${p.name} Folds.`); 
                             createFoldParticles(p);
                         } else if (rand > 0.7 && p.chips > (callAmt + gameState.minRaise)) {
                             // AI 加注
-                            const raiseAmt = gameState.minRaise;
+                        const raiseAmt = gameState.minRaise;
                             placeBet(p.id, callAmt + raiseAmt);
-                            addToHistory(`${p.name} Raises to ${p.currentBet}.`);
-                        } else {
+                        addToHistory(`${p.name} Raises to ${p.currentBet}.`);
+                    } else {
                             // AI 跟注或过牌
-                            if (callAmt > 0) {
+                        if (callAmt > 0) {
                                 placeBet(p.id, Math.min(callAmt, p.chips));
                                 if (p.chips === 0) addToHistory(`${p.name} is ALL-IN!`);
                                 else addToHistory(`${p.name} Calls.`);
-                            } else {
-                                addToHistory(`${p.name} Checks.`);
-                            }
+                        } else {
+                            addToHistory(`${p.name} Checks.`);
                         }
+                    }
                     } catch (err) {
                         console.error('[AI ACTION ERROR]', err);
                         addToHistory(`ERROR: AI action failed (${p.name})`);
@@ -1812,7 +2342,7 @@
                     return;
                 }
                 dbg(`advanceRound (round=${gameState.round})`);
-                advanceRound();
+                    advanceRound();
                 return;
             }
 
@@ -2034,7 +2564,7 @@
                         x: p.pos.x + (Math.random()-0.5)*0.5, 
                         z: p.pos.z + (Math.random()-0.5)*0.5, 
                         y: 0.05, 
-                        duration: 1.2,
+                    duration: 1.2, 
                         ease: "power2.inOut"
                     });
                 });
@@ -2067,6 +2597,19 @@
                 updatePlayerStackMesh(p);
             });
             document.getElementById('raise-amount-display').innerText = currentRaiseInput;
+
+            // Offline: keep Check button label consistent with online (shows needed amount)
+            try {
+                const btnCheck = document.getElementById('btn-check');
+                const me = gameState.players.find(p => p.id === gameState.myPlayerIdx);
+                const toCall = me ? Math.max(0, Number(gameState.currentMaxBet || 0) - Number(me.currentBet || 0)) : 0;
+                const callPay = me ? Math.max(0, Math.min(toCall, Number(me.chips || 0))) : 0;
+                if (btnCheck && !IS_MULTIPLAYER) {
+                    btnCheck.innerText = (toCall > 0)
+                        ? `Call $${callPay}${(me && Number(me.chips || 0) > 0 && Number(me.chips || 0) < toCall) ? ' (All-in)' : ''}`
+                        : 'Check $0';
+                }
+            } catch (_) {}
         }
 
         function addToHistory(msg) {
@@ -2082,6 +2625,100 @@
 
         function setupEvents() {
             window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+
+            // BGM UI (user gesture required for autoplay policies)
+            try {
+                const bgm = document.getElementById('bgm');
+                const bgmBtn = document.getElementById('bgm-toggle');
+                // Default ON (用户可手动关闭). Browsers may block audible autoplay, so we:
+                // 1) try normal play; 2) fallback to muted autoplay; 3) unmute on first user gesture.
+                const saved = localStorage.getItem('nebula_bgm') || 'on';
+                const setLabel = (on) => { if (bgmBtn) bgmBtn.innerText = on ? 'BGM: On' : 'BGM: Off'; };
+                setLabel(saved === 'on');
+                if (bgm) {
+                    bgm.volume = 0.35;
+                    bgm.muted = false;
+                }
+                const tryAutoPlay = async () => {
+                    if (!bgm) return;
+                    if (!(localStorage.getItem('nebula_bgm') === 'on' || !localStorage.getItem('nebula_bgm'))) return;
+                    try {
+                        bgm.muted = false;
+                        await bgm.play();
+                        return;
+                    } catch (_) {
+                        // Audible autoplay likely blocked. Try muted autoplay.
+                        try {
+                            bgm.muted = true;
+                            await bgm.play();
+                            return;
+                        } catch (e2) {
+                            console.warn('[bgm] autoplay failed', e2);
+                        }
+                    }
+                };
+                // Always: on first user gesture, ensure audio is playing (no need to toggle Off->On).
+                const ensurePlayingOnGesture = async () => {
+                    try {
+                        if (!bgm) return;
+                        if (!(localStorage.getItem('nebula_bgm') === 'on' || !localStorage.getItem('nebula_bgm'))) return;
+                        if (bgm.paused) {
+                            bgm.muted = false;
+                            await bgm.play();
+                        } else if (bgm.muted) {
+                            bgm.muted = false;
+                        }
+                    } catch (_) {}
+                };
+                window.addEventListener('pointerdown', ensurePlayingOnGesture, { once: true });
+                window.addEventListener('keydown', ensurePlayingOnGesture, { once: true });
+                if (bgmBtn) {
+                    bgmBtn.onclick = async () => {
+                        if (!bgm) return;
+                        const wantOn = !(localStorage.getItem('nebula_bgm') === 'on');
+                        localStorage.setItem('nebula_bgm', wantOn ? 'on' : 'off');
+                        setLabel(wantOn);
+                        try {
+                            if (wantOn) {
+                                bgm.muted = false;
+                                await bgm.play();
+                            } else {
+                                bgm.pause();
+                                bgm.muted = false;
+                            }
+                        } catch (e) {
+                            // Most common: autoplay blocked or codec unsupported
+                            console.warn('[bgm] play failed', e);
+                            alert('BGM failed to play. If autoplay is blocked, tap once and try again.');
+                            localStorage.setItem('nebula_bgm', 'off');
+                            setLabel(false);
+                        }
+                    };
+                }
+                // attempt autoplay on load (default ON)
+                if (saved === 'on') {
+                    setTimeout(() => { tryAutoPlay(); }, 0);
+                }
+            } catch (_) {}
+
+            // SFX toggle
+            try {
+                const sfxBtn = document.getElementById('sfx-toggle');
+                if (sfxBtn) {
+                    const apply = () => { sfxBtn.innerText = SFX.isEnabled() ? 'SFX: On' : 'SFX: Off'; };
+                    apply();
+                    sfxBtn.onclick = async () => {
+                        const next = !SFX.isEnabled();
+                        SFX.setEnabled(next);
+                        apply();
+                        if (next) {
+                            try { await SFX.ensureCtx(); } catch (_) {}
+                            // small confirmation blip
+                            try { SFX.turn(); } catch (_) {}
+                        }
+                    };
+                }
+            } catch (_) {}
 
             // Voice UI
             updateMicButton();
@@ -2303,7 +2940,7 @@
                 const current = document.documentElement.getAttribute('data-theme') || 'night';
                 applyTheme(current === 'light' ? 'night' : 'light');
             };
-
+            
             document.getElementById('btn-plus').onclick = () => { currentRaiseInput += gameState.minRaise; updateUI(); };
             document.getElementById('btn-minus').onclick = () => { if(currentRaiseInput > gameState.minRaise) currentRaiseInput -= gameState.minRaise; updateUI(); };
             
@@ -2316,8 +2953,8 @@
                 } else {
                     me.isFolded = true;
                     createFoldParticles(me);
-                    addToHistory("You Folded.");
-                    nextStep();
+                addToHistory("You Folded.");
+                nextStep();
                 }
             };
             document.getElementById('btn-check').onclick = () => {
@@ -2328,13 +2965,13 @@
                     socket.emit('action', { type: 'call' }); // server decides call vs check
                 } else {
                     const callAmt = gameState.currentMaxBet - me.currentBet;
-                    if (callAmt > 0) {
+                if (callAmt > 0) {
                         placeBet(me.id, callAmt);
-                        addToHistory(`You Called $${callAmt}.`);
-                    } else {
-                        addToHistory("You Checked.");
-                    }
-                    nextStep();
+                    addToHistory(`You Called $${callAmt}.`);
+                } else {
+                    addToHistory("You Checked.");
+                }
+                nextStep();
                 }
             };
             document.getElementById('btn-raise').onclick = () => {
@@ -2345,10 +2982,10 @@
                     socket.emit('action', { type: 'raise', raiseBy: currentRaiseInput });
                 } else {
                     const callAmt = gameState.currentMaxBet - me.currentBet;
-                    const totalRaise = callAmt + currentRaiseInput;
+                const totalRaise = callAmt + currentRaiseInput;
                     placeBet(me.id, totalRaise);
                     addToHistory(`You Raised $${currentRaiseInput} (Total $${me.currentBet}).`);
-                    nextStep();
+                nextStep();
                 }
             };
             document.getElementById('btn-allin').onclick = () => {
@@ -2360,16 +2997,30 @@
                 } else {
                     const allInAmt = me.chips;
                     placeBet(me.id, allInAmt);
-                    addToHistory("YOU ALL-IN!!!");
-                    nextStep();
+                addToHistory("YOU ALL-IN!!!");
+                nextStep();
                 }
+            };
+            document.getElementById('btn-rebuy').onclick = () => {
+                if (!IS_MULTIPLAYER) return;
+                if (!(Number.isInteger(mySeatIdx) && mySeatIdx >= 0)) return;
+                const def = Number.isFinite(Number(gameState.initialChips)) ? Number(gameState.initialChips) : 1000;
+                const raw = prompt('Rebuy amount (>=1000 and multiple of 50):', String(def));
+                if (raw === null) return;
+                const amt = Number(raw);
+                if (!Number.isFinite(amt) || amt < 1000 || (amt % 50) !== 0) {
+                    alert('Rebuy amount must be >=1000 and a multiple of 50.');
+                    return;
+                }
+                try { socket.emit('rebuy', { amount: amt }); } catch(_) {}
+                addToHistory(`Rebuy: $${amt} (applies next hand)`);
             };
             document.getElementById('btn-next').onclick = () => {
                 if (IS_MULTIPLAYER) {
                     socket.emit('next_hand');
                 } else {
-                    gameState.dealerIdx = (gameState.dealerIdx + 1) % CONFIG.numPlayers;
-                    startNewHand();
+                gameState.dealerIdx = (gameState.dealerIdx + 1) % CONFIG.numPlayers;
+                startNewHand();
                 }
             };
         }

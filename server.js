@@ -84,6 +84,8 @@ function makeRoom(roomId) {
     // game state
     handNum: 0,
     dealerSeatIdx: 0,
+    sbSeatIdx: null,
+    bbSeatIdx: null,
     pot: 0,
     round: "WAITING", // WAITING | PRE-FLOP | FLOP | TURN | RIVER | SHOWDOWN
     communityCards: [],
@@ -120,15 +122,58 @@ function buildStandings(room) {
     const seat = room.seats[i];
     if (!seat) continue;
     const p = getPlayer(room, i);
+    const buyIn = p && Number.isFinite(p.totalBuyIn) ? p.totalBuyIn : (Number.isFinite(room.initialChips) ? room.initialChips : 1000);
+    const chips = p ? p.chips : 0;
     out.push({
       seatIdx: i,
       type: seat.type,
       name: seat.name,
-      chips: p ? p.chips : 0
+      chips,
+      buyIn,
+      net: chips - buyIn
     });
   }
   out.sort((a, b) => (b.chips || 0) - (a.chips || 0));
   return out;
+}
+
+async function emitMatchOverAndEnterClosing(room, reason) {
+  // If already closing, don't re-emit
+  if (room.closing) return;
+
+  // stop any pending AI timers
+  try { clearTimeout(room.aiTimer); } catch (_) {}
+  room.aiTimer = null;
+
+  if (reason) {
+    try { broadcastActivity(room, String(reason)); } catch (_) {}
+  }
+  broadcastActivity(room, "Match over.");
+
+  const standings = buildStandings(room);
+  const hands = Array.isArray(room.handHistory) ? room.handHistory.slice(0) : [];
+  io.to(room.roomId).emit("match_over", {
+    roomId: room.roomId,
+    totalHands: room.totalHands, // scheduled
+    scheduledHands: room.totalHands,
+    playedHands: hands.length,
+    standings,
+    hands
+  });
+
+  room.closing = true;
+  room.started = false;
+  room.round = "WAITING";
+  room.activeSeatIdx = null;
+  room.pendingActionSeats = new Set();
+
+  // Track currently connected sockets for ack-based release
+  room.expectedAcks = new Set();
+  room.matchAcks = new Set();
+  try {
+    const socks = await io.in(room.roomId).fetchSockets();
+    room.expectedAcks = new Set(socks.map((s) => s.id));
+  } catch (_) {}
 }
 
 function seatToPublic(seat, seatIdx) {
@@ -245,7 +290,8 @@ function getPublicGameState(room) {
       chips: p.chips,
       currentBet: p.currentBet,
       isFolded: p.isFolded,
-      isBankrupt: p.isBankrupt
+      isBankrupt: p.isBankrupt,
+      totalBuyIn: Number.isFinite(p.totalBuyIn) ? p.totalBuyIn : (Number.isFinite(room.initialChips) ? room.initialChips : 1000)
     });
   }
   return {
@@ -254,6 +300,8 @@ function getPublicGameState(room) {
     settings: { totalHands: room.totalHands, initialChips: room.initialChips, smallBlind: room.smallBlind, bigBlind: room.bigBlind },
     handNum: room.handNum,
     dealerSeatIdx: room.dealerSeatIdx,
+    sbSeatIdx: room.sbSeatIdx,
+    bbSeatIdx: room.bbSeatIdx,
     activeSeatIdx: room.activeSeatIdx,
     pot: room.pot,
     round: room.round,
@@ -388,13 +436,38 @@ function ensurePlayersMap(room) {
         currentBet: 0,
         isFolded: false,
         isBankrupt: false,
-        hand: []
+        hand: [],
+        totalBuyIn: Number.isFinite(room.initialChips) ? room.initialChips : 1000,
+        pendingRebuy: 0
       });
     }
+  }
+  // Backfill fields for older rooms/players
+  for (const p of room.players.values()) {
+    if (!Number.isFinite(p.totalBuyIn)) p.totalBuyIn = Number.isFinite(room.initialChips) ? room.initialChips : 1000;
+    if (!Number.isFinite(p.pendingRebuy)) p.pendingRebuy = 0;
   }
   // Remove players for emptied seats
   for (const seatIdx of [...room.players.keys()]) {
     if (!room.seats[seatIdx]) room.players.delete(seatIdx);
+  }
+}
+
+function applyPendingRebuys(room) {
+  for (let i = 0; i < SEATS; i++) {
+    const seat = room.seats[i];
+    if (!seat || seat.type !== "player") continue;
+    const p = getPlayer(room, i);
+    if (!p) continue;
+    const pend = Number(p.pendingRebuy || 0);
+    if (!Number.isFinite(pend) || pend <= 0) continue;
+    p.chips += pend;
+    p.pendingRebuy = 0;
+    p.isBankrupt = false;
+    p.isFolded = false;
+    p.currentBet = 0;
+    p.hand = [];
+    broadcastActivity(room, `${seat.name} rebuys $${pend}.`);
   }
 }
 
@@ -449,22 +522,24 @@ function chooseNextActor(room, fromSeatIdx) {
 
 function startHand(room) {
   ensurePlayersMap(room);
-  resetHand(room);
+  applyPendingRebuys(room);
 
   const activeEligible = [];
   for (let i = 0; i < SEATS; i++) if (isSeatEligible(room, i)) activeEligible.push(i);
   if (activeEligible.length < 2) {
-    room.round = "WAITING";
-    room.started = false;
-    broadcastActivity(room, "Not enough players with chips to continue.");
-    broadcastRoom(room);
-    broadcastGame(room);
+    // End match early (e.g. only one player has chips). Show summary instead of getting stuck in WAITING.
+    void emitMatchOverAndEnterClosing(room, "Not enough players with chips to continue.");
     return;
   }
+
+  resetHand(room); // increments handNum; only do this once we're sure the hand will actually start
+  broadcastActivity(room, `--- HAND ${room.handNum} / ${room.totalHands} ---`);
 
   const sbSeat = getActiveOffset(room, room.dealerSeatIdx, 1);
   const bbSeat = getActiveOffset(room, room.dealerSeatIdx, 2);
   const utgSeat = getActiveOffset(room, room.dealerSeatIdx, 3);
+  room.sbSeatIdx = sbSeat;
+  room.bbSeatIdx = bbSeat;
 
   // blinds
   postBlind(room, sbSeat, room.smallBlind);
@@ -546,6 +621,14 @@ function finishHand(room) {
   room.activeSeatIdx = null;
 
   const inHand = getInHandSeats(room);
+  const showdownHands = inHand
+    .map((seatIdx) => {
+      const p = getPlayer(room, seatIdx);
+      const seat = room.seats[seatIdx];
+      const hand = Array.isArray(p?.hand) ? p.hand.slice(0, 2) : [];
+      return { seatIdx, name: seat?.name || `Seat-${seatIdx}`, hand };
+    })
+    .filter((x) => Array.isArray(x.hand) && x.hand.length >= 2);
   if (inHand.length === 0) {
     // This shouldn't normally happen; prefer awarding pot to last actor to avoid dead-end states.
     const fallbackSeat = Number.isInteger(room.lastActorSeatIdx) ? room.lastActorSeatIdx : null;
@@ -566,7 +649,8 @@ function finishHand(room) {
         handNum: room.handNum,
         totalHands: room.totalHands,
         winners: [{ seatIdx: fallbackSeat, name: winnerName }],
-        desc: "No active players (fallback)"
+        desc: "No active players (fallback)",
+        showdownHands: showdownHands
       });
       room.handHistory.push({ handNum: room.handNum, winners: [{ seatIdx: fallbackSeat, name: winnerName }], desc: "No active players (fallback)" });
       broadcastGame(room);
@@ -589,7 +673,13 @@ function finishHand(room) {
     broadcastActivity(room, `Game Over. ${winnerName} wins (all others folded)!`);
     room.pot = 0;
     room.round = "HAND_OVER";
-    io.to(room.roomId).emit("hand_over", { handNum: room.handNum, totalHands: room.totalHands, winners: [{ seatIdx: winnerSeat, name: winnerName }], desc: "All others folded" });
+    io.to(room.roomId).emit("hand_over", {
+      handNum: room.handNum,
+      totalHands: room.totalHands,
+      winners: [{ seatIdx: winnerSeat, name: winnerName }],
+      desc: "All others folded",
+      showdownHands: showdownHands
+    });
     room.handHistory.push({ handNum: room.handNum, winners: [{ seatIdx: winnerSeat, name: winnerName }], desc: "All others folded" });
     broadcastGame(room);
     return;
@@ -617,7 +707,8 @@ function finishHand(room) {
     handNum: room.handNum,
     totalHands: room.totalHands,
     winners: winners.map((w) => ({ seatIdx: w.seatIdx, name: room.seats[w.seatIdx].name })),
-    desc: best.desc
+    desc: best.desc,
+    showdownHands: showdownHands
   });
   room.handHistory.push({
     handNum: room.handNum,
@@ -890,7 +981,7 @@ io.on("connection", (socket) => {
     const rid = socket.data.roomId;
     if (!rid) return;
     const room = rooms.get(rid);
-    if (!room || room.started) return;
+    if (!room || room.started || room.closing) return;
 
     const idx = Number(seatIdx);
     if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
@@ -915,7 +1006,7 @@ io.on("connection", (socket) => {
     const rid = socket.data.roomId;
     if (!rid) return;
     const room = rooms.get(rid);
-    if (!room || room.started) return;
+    if (!room || room.started || room.closing) return;
     if (socket.id !== room.hostSocketId) return;
 
     const idx = Number(seatIdx);
@@ -939,7 +1030,7 @@ io.on("connection", (socket) => {
     const room = rooms.get(rid);
     if (!room) return;
     if (socket.id !== room.hostSocketId) return;
-    if (room.started) return; // 只允许在等待/选座阶段踢人
+    if (room.started || room.closing) return; // 只允许在等待/选座阶段踢人
 
     const idx = Number(seatIdx);
     if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
@@ -964,7 +1055,7 @@ io.on("connection", (socket) => {
     const room = rooms.get(rid);
     if (!room) return;
     if (socket.id !== room.hostSocketId) return;
-    if (room.started) return;
+    if (room.started || room.closing) return;
 
     const occ = room.seats.filter(Boolean).length;
     if (occ < 3) {
@@ -981,8 +1072,6 @@ io.on("connection", (socket) => {
     room.dealerSeatIdx = 0;
     ensurePlayersMap(room);
     broadcastRoom(room);
-
-    broadcastActivity(room, `--- HAND 1 / ${room.totalHands} ---`);
     startHand(room);
   });
 
@@ -996,6 +1085,96 @@ io.on("connection", (socket) => {
     handleAction(room, seatIdx, payload || {});
   });
 
+  // ---- Rebuy (players can request; host approves) ----
+  // Fast rebuy: player directly adds pending chips for next hand (no host approval).
+  // This matches the UX: busted player sees a prompt, enters amount, re-enters next hand.
+  socket.on("rebuy", ({ amount }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || !room.started || room.closing) return;
+    const seatIdx = socket.data.seatIdx;
+    if (!Number.isInteger(seatIdx) || seatIdx < 0 || seatIdx >= SEATS) return;
+    const seat = room.seats[seatIdx];
+    if (!seat || seat.type !== "player" || seat.socketId !== socket.id) return;
+    const p = getPlayer(room, seatIdx);
+    if (!p) return;
+    if (p.chips > 0) return; // only when busted
+
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 1000 || amt % 50 !== 0) {
+      socket.emit("error_msg", { msg: "Rebuy amount must be >= 1000 and a multiple of 50." });
+      return;
+    }
+
+    p.pendingRebuy = Number(p.pendingRebuy || 0) + amt;
+    p.totalBuyIn = Number(p.totalBuyIn || (Number.isFinite(room.initialChips) ? room.initialChips : 1000)) + amt;
+    broadcastActivity(room, `${seat.name} rebuys $${amt} (applies next hand).`);
+    broadcastGame(room);
+  });
+
+  socket.on("rebuy_request", ({ amount }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || !room.started || room.closing) return;
+    const seatIdx = socket.data.seatIdx;
+    if (!Number.isInteger(seatIdx) || seatIdx < 0 || seatIdx >= SEATS) return;
+    const seat = room.seats[seatIdx];
+    if (!seat || seat.type !== "player" || seat.socketId !== socket.id) return;
+    const p = getPlayer(room, seatIdx);
+    if (!p) return;
+    if (p.chips > 0) return; // only when busted
+
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 1000 || amt % 50 !== 0) {
+      socket.emit("error_msg", { msg: "Rebuy amount must be >= 1000 and a multiple of 50." });
+      return;
+    }
+    if (!room.hostSocketId || !io.sockets.sockets.has(room.hostSocketId)) {
+      socket.emit("error_msg", { msg: "Host is offline. Cannot approve rebuy right now." });
+      return;
+    }
+    io.to(room.hostSocketId).emit("rebuy_requested", { seatIdx, name: seat.name, amount: amt });
+  });
+
+  socket.on("rebuy_approve", ({ seatIdx, amount }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || !room.started || room.closing) return;
+    if (socket.id !== room.hostSocketId) return;
+    const idx = Number(seatIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
+    const seat = room.seats[idx];
+    if (!seat || seat.type !== "player") return;
+    const p = getPlayer(room, idx);
+    if (!p) return;
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 1000 || amt % 50 !== 0) return;
+
+    p.pendingRebuy = Number(p.pendingRebuy || 0) + amt;
+    p.totalBuyIn = Number(p.totalBuyIn || (Number.isFinite(room.initialChips) ? room.initialChips : 1000)) + amt;
+    broadcastActivity(room, `${seat.name} rebuy approved: $${amt} (applies next hand).`);
+    broadcastGame(room);
+  });
+
+  socket.on("rebuy_deny", ({ seatIdx }) => {
+    const rid = socket.data.roomId;
+    if (!rid) return;
+    const room = rooms.get(rid);
+    if (!room || !room.started || room.closing) return;
+    if (socket.id !== room.hostSocketId) return;
+    const idx = Number(seatIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= SEATS) return;
+    const seat = room.seats[idx];
+    if (!seat || seat.type !== "player") return;
+    if (seat.socketId && io.sockets.sockets.has(seat.socketId)) {
+      io.to(seat.socketId).emit("rebuy_denied", { msg: "Rebuy denied by host." });
+    }
+    broadcastActivity(room, `${seat.name} rebuy denied.`);
+  });
+
   socket.on("next_hand", async () => {
     const rid = socket.data.roomId;
     if (!rid) return;
@@ -1005,41 +1184,11 @@ io.on("connection", (socket) => {
 
     if (room.pot !== 0) return;
     if (room.handNum >= room.totalHands) {
-      broadcastActivity(room, "Match over.");
-      // Send match summary before releasing the room.
-      const standings = buildStandings(room);
-      const hands = Array.isArray(room.handHistory) ? room.handHistory.slice(0) : [];
-      io.to(room.roomId).emit("match_over", {
-        roomId: room.roomId,
-        totalHands: room.totalHands,
-        standings,
-        hands
-      });
-
-      // Mark closing and schedule room release after everyone has had time to view results.
-      room.closing = true;
-      room.started = false;
-      room.round = "WAITING";
-
-      // Track currently connected sockets for ack-based early release
-      try {
-        const socks = await io.in(room.roomId).fetchSockets();
-        room.expectedAcks = new Set(socks.map((s) => s.id));
-        room.matchAcks = new Set();
-      } catch (_) {
-        room.expectedAcks = new Set();
-        room.matchAcks = new Set();
-      }
-
-      // Hard timeout release (90s)
-      room.closeTimer = setTimeout(() => {
-        releaseRoom(room);
-      }, 90 * 1000);
+      await emitMatchOverAndEnterClosing(room);
       return;
     }
 
     room.dealerSeatIdx = (room.dealerSeatIdx + 1) % SEATS;
-    broadcastActivity(room, `--- HAND ${room.handNum + 1} / ${room.totalHands} ---`);
     startHand(room);
   });
 
